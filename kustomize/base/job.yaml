@@ -1,0 +1,81 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: azure-arc-kubernetes-bootstrap
+  namespace: azure-arc-kubernetes-bootstrap
+spec:
+  template:
+    spec:
+      serviceAccountName: azure-arc-kubernetes-bootstrap
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      containers:
+      - name: azure-arc-kubernetes-bootstrap
+        imagePullPolicy: Always
+        image: arccicd9264c4f6acr.azurecr.io/kube-arc-data-services-installer-job:0.0.1
+        env:
+        - name: VERBOSE
+          value: "false"
+        - name: CUSTOM_LOCATION_OID
+          value: 51dfe1e8-70c6-4de5-a08e-e18aff23d815
+        - name: ONBOARDING_TIMEOUT
+          value: "900"
+        - name: DELETE_FLAG
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: DELETE_FLAG
+              optional: true
+        - name: TENANT_ID
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: TENANT_ID
+        - name: SUBSCRIPTION_ID
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: SUBSCRIPTION_ID
+        - name: CLIENT_ID
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: CLIENT_ID
+        - name: CLIENT_SECRET
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: CLIENT_SECRET
+        - name: CONNECTED_CLUSTER_RESOURCE_GROUP
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: CONNECTED_CLUSTER_RESOURCE_GROUP
+        - name: CONNECTED_CLUSTER
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: CONNECTED_CLUSTER
+        - name: CONNECTED_CLUSTER_LOCATION
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: CONNECTED_CLUSTER_LOCATION
+        - name: ARC_DATA_SERVICES_RESOURCE_GROUP
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_SERVICES_RESOURCE_GROUP
+        - name: ARC_DATA_SERVICES_LOCATION
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_SERVICES_LOCATION
+        - name: ARC_DATA_SERVICES_EXT
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_SERVICES_EXT
+      restartPolicy: Never
+  backoffLimit: 4

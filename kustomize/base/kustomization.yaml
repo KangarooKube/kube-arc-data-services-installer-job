@@ -1,0 +1,5 @@
+resources:
+  - clusterrolebinding.yaml
+  - job.yaml
+  - namespace.yaml
+  - serviceaccount.yaml
