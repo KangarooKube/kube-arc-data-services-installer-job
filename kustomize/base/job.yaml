@@ -95,5 +95,10 @@ spec:
             secretKeyRef:
               name: azure-arc-kubernetes-bootstrap
               key: ARC_DATA_NAMESPACE
+        - name: ARC_DATA_CONTROLLER
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_CONTROLLER
       restartPolicy: Never
   backoffLimit: 4

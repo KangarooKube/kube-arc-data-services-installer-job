@@ -84,6 +84,7 @@ export ARC_DATA_EXT="arc-data-bootstrapper"
 export ARC_DATA_EXT_AUTO_UPGRADE="false"
 export ARC_DATA_EXT_VERSION="1.2.19831003"
 export ARC_DATA_NAMESPACE="azure-arc-data"
+export ARC_DATA_CONTROLLER="azure-arc-data-controller"
 
 export DELETE_FLAG='false'
 

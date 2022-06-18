@@ -120,6 +120,11 @@ if [[ -z "${ARC_DATA_NAMESPACE}" ]]; then
   exit 1
 fi
 
+if [[ -z "${ARC_DATA_CONTROLLER}" ]]; then
+  echo "ERROR | variable ARC_DATA_CONTROLLER is required."
+  exit 1
+fi
+
 bootstrapper_version_param=()
 if [[ -n "${ARC_DATA_EXT_VERSION}" ]]; then
   bootstrapper_version_param+=(--version "${ARC_DATA_EXT_VERSION}")
@@ -200,9 +205,9 @@ echo "INFO | Current subscription assigned $AZ_CURRENT_ACCOUNT"
 #     └── 2. Connected Cluster
 #         ├── 2a. Idempotent - Enable Cluster-Connect and Custom-Locations
 #         ├── 3. Bootstrapper Extension
-#         |    └── 3a. Idempotent - Bootstrapper MSI Assignment
+#         |   └── 3a. Idempotent - Bootstrapper MSI Assignment
 #         └── 4. Custom Location
-#                └── 5. Data Controller
+#             └── 5. Data Controller
 
 # 1. Connected Cluster and Data Services RG
 CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS=$(az group list | jq -r ".[] | select(.name==\"$CONNECTED_CLUSTER_RESOURCE_GROUP\") |.name")
@@ -218,6 +223,7 @@ if [[ -n "${CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS}" ]] && [[ -n "${ARC_DATA_RE
   export CONNECTED_CLUSTER_EXISTS
 
   if [[ -n "${CONNECTED_CLUSTER_EXISTS}" ]]; then
+
     # 3. Bootstrapper Extension
     ARC_DATA_EXT_EXISTS=$(az k8s-extension list --cluster-name "$CONNECTED_CLUSTER" --resource-group "$CONNECTED_CLUSTER_RESOURCE_GROUP" --cluster-type connectedclusters | jq -r ".[] | select(.extensionType==\"microsoft.arcdataservices\") |.name")
     export ARC_DATA_EXT_EXISTS
@@ -227,6 +233,10 @@ if [[ -n "${CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS}" ]] && [[ -n "${ARC_DATA_RE
     export ARC_DATA_CUSTOM_LOCATION_EXISTS
 
       # 5. Data Controller
+      if [[ -n "${ARC_DATA_CUSTOM_LOCATION_EXISTS}" ]]; then
+        ARC_DATA_CONTROLLER_EXISTS=$(az resource list --name "$ARC_DATA_CONTROLLER" --resource-group "$ARC_DATA_RESOURCE_GROUP" --query "[?contains(type,'Microsoft.AzureArcData/DataControllers')].name" --output tsv)
+        export ARC_DATA_CONTROLLER_EXISTS
+      fi
   fi
 
 fi
@@ -245,6 +255,7 @@ ARC_DATA_RESOURCE_GROUP_EXISTS=$(true_if_nonempty "${ARC_DATA_RESOURCE_GROUP_EXI
 CONNECTED_CLUSTER_EXISTS=$(true_if_nonempty "${CONNECTED_CLUSTER_EXISTS}")
 ARC_DATA_EXT_EXISTS=$(true_if_nonempty "${ARC_DATA_EXT_EXISTS}")
 ARC_DATA_CUSTOM_LOCATION_EXISTS=$(true_if_nonempty "${ARC_DATA_CUSTOM_LOCATION_EXISTS}")
+ARC_DATA_CONTROLLER_EXISTS=$(true_if_nonempty "${ARC_DATA_CONTROLLER_EXISTS}")
 
 echo ""
 echo "INFO | 1. CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS? $CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS"
@@ -252,6 +263,7 @@ echo "INFO | 1. ARC_DATA_RESOURCE_GROUP_EXISTS? $ARC_DATA_RESOURCE_GROUP_EXISTS"
 echo "INFO |  2. CONNECTED_CLUSTER_EXISTS? $CONNECTED_CLUSTER_EXISTS"
 echo "INFO |    3. ARC_DATA_EXT_EXISTS? $ARC_DATA_EXT_EXISTS"
 echo "INFO |    4. ARC_DATA_CUSTOM_LOCATION_EXISTS? $ARC_DATA_CUSTOM_LOCATION_EXISTS"
+echo "INFO |      5. ARC_DATA_CONTROLLER_EXISTS? $ARC_DATA_CONTROLLER_EXISTS"
 echo ""
 
 # ======================
@@ -259,8 +271,20 @@ echo ""
 # ======================
 if [ "${DELETE_FLAG}" = 'true' ]; then
   echo "INFO | Starting Arc + Data Services destruction process"
+  
+  # 5. Data Controller
+  # TBD
 
-  # ...
+  # 4. Custom Location
+  if [ "$ARC_DATA_CUSTOM_LOCATION_EXISTS" = 'true' ]; then 
+    echo "INFO | Deleting Custom Location $ARC_DATA_NAMESPACE"
+    az customlocation delete --name "${ARC_DATA_NAMESPACE}" \
+                         --resource-group "${ARC_DATA_RESOURCE_GROUP}" \
+                         --yes \
+                         ${VERBOSE:+--debug --verbose}
+  else 
+    echo "INFO | Custom Location $ARC_DATA_NAMESPACE doest not exist, skipping delete"
+  fi
 
   # 3. Bootstrapper Extension
   if [ "$ARC_DATA_EXT_EXISTS" = 'true' ]; then 
@@ -271,6 +295,19 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
                         --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" \
                         --yes \
                         ${VERBOSE:+--debug --verbose}
+    
+    # Delete Arcdata CRDs
+    echo "INFO | Deleting Arc Data CRDs"
+    kubectl delete crd $(kubectl get crd | grep arcdata | cut -f1 -d' ')
+
+    # Delete Arcdata mutatingwebhookconfiguration
+    echo "INFO | Deleting Arc Data Mutating Webhook Configs"
+    kubectl delete mutatingwebhookconfiguration arcdata.microsoft.com-webhook-"${ARC_DATA_NAMESPACE}"
+
+    # Delete Arc Data Namespace
+    echo "INFO | Deleting Arc Data Namespace"
+    kubectl delete namespace "${ARC_DATA_NAMESPACE}"
+
   else 
     echo "INFO | Bootstrapper Extension $ARC_DATA_EXT doest not exist, skipping delete"
   fi
@@ -345,7 +382,7 @@ if [ "$CONNECTED_CLUSTER_EXISTS" = 'true' ]; then
     echo "INFO | Enabling Cluster-Connect and Custom-Locations"
     az connectedk8s enable-features -n "${CONNECTED_CLUSTER}" \
                                     -g "${CONNECTED_CLUSTER_RESOURCE_GROUP}" \
-                                    --kube-config $HOME/.kube/config \
+                                    --kube-config "$HOME/.kube/config" \
                                     --features cluster-connect custom-locations \
                                     "${custom_location_oid_param[@]}" \
                                     ${VERBOSE:+--debug --verbose}
@@ -400,6 +437,46 @@ else
       exit 1
     fi
 fi
+
+# ==================
+# 4. Custom Location
+# ==================
+if [ "$ARC_DATA_CUSTOM_LOCATION_EXISTS" = 'true' ]; then
+    echo "INFO | Custom Location $ARC_DATA_NAMESPACE already exists, skipping create"
+else 
+    echo "INFO | Creating Custom Location $ARC_DATA_NAMESPACE"
+    
+    CONNECTED_CLUSTER_ID=$(az connectedk8s show --name "${CONNECTED_CLUSTER}" --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" --query id --output tsv)
+    export CONNECTED_CLUSTER_ID
+
+    ARC_DATA_EXT_ID=$(az k8s-extension show --cluster-name "${CONNECTED_CLUSTER}" --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" --cluster-type connectedClusters --name "${ARC_DATA_EXT}" --query "id" --output tsv)
+    export ARC_DATA_EXT_ID
+
+    az customlocation create --name "${ARC_DATA_NAMESPACE}" \
+                             --resource-group "${ARC_DATA_RESOURCE_GROUP}" \
+                             --namespace "${ARC_DATA_NAMESPACE}" \
+                             --host-resource-id "${CONNECTED_CLUSTER_ID}" \
+                             --cluster-extension-ids "${ARC_DATA_EXT_ID}" \
+                             --location "${CONNECTED_CLUSTER_LOCATION}" \
+                             ${VERBOSE:+--debug --verbose}
+    
+    # Check Custom Location status
+    ARC_DATA_CUSTOM_LOCATION_STATUS=$(az customlocation show --name "$ARC_DATA_NAMESPACE" --resource-group "$ARC_DATA_RESOURCE_GROUP" | jq -r '.provisioningState')
+
+    if [ "$ARC_DATA_CUSTOM_LOCATION_STATUS" = 'Succeeded' ]; then
+      ARC_DATA_CUSTOM_LOCATION_EXISTS='true'
+      export ARC_DATA_CUSTOM_LOCATION_EXISTS
+    else
+      echo "ERROR | Custom Location $ARC_DATA_NAMESPACE provisioning status is $ARC_DATA_CUSTOM_LOCATION_STATUS, manual intervention is required"
+      exit 1
+    fi
+fi
+
+# ==================
+# 5. Data Controller
+# ==================
+
+# TBD - need config in ConfigMap first - create one for AKS in Kustomize, one later on for OpenShift
 
 echo ""
 echo "----------------------------------------------------------------------------------"
