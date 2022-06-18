@@ -52,11 +52,9 @@ if [ "${DELETE_FLAG}" = 'false' ]; then
   echo "INFO | Starting Arc + Data Services onboarding process"
 fi
 
-if [[ -z "${DELETE_FLAG}" ]]; then
-  if [[ -z "${CONNECTED_CLUSTER_LOCATION}" ]]; then
-    echo "ERROR | variable CONNECTED_CLUSTER_LOCATION is required for cluster onboarding."
+if [[ -z "${CONNECTED_CLUSTER_LOCATION}" ]]; then
+    echo "ERROR | variable CONNECTED_CLUSTER_LOCATION is required"
     exit 1
-  fi
 fi
 
 if [[ -z "${TENANT_ID}" ]]; then
@@ -87,6 +85,44 @@ fi
 if [[ -z "${CONNECTED_CLUSTER}" ]]; then
   echo "ERROR | variable CONNECTED_CLUSTER is required."
   exit 1
+fi
+
+if [[ -z "${ARC_DATA_RESOURCE_GROUP}" ]]; then
+  echo "ERROR | variable ARC_DATA_RESOURCE_GROUP is required."
+  exit 1
+fi
+
+if [[ -z "${ARC_DATA_RESOURCE_GROUP}" ]]; then
+  echo "ERROR | variable ARC_DATA_RESOURCE_GROUP is required."
+  exit 1
+fi
+
+if [[ -z "${ARC_DATA_LOCATION}" ]]; then
+  echo "INFO | variable ARC_DATA_LOCATION is not set, defaulting to CONNECTED_CLUSTER_LOCATION"
+  ARC_DATA_LOCATION=${CONNECTED_CLUSTER_LOCATION}
+  export ARC_DATA_LOCATION
+fi
+
+if [[ -z "${ARC_DATA_EXT}" ]]; then
+  echo "INFO | variable ARC_DATA_EXT is not set, defaulting to arc-data-bootstrapper"
+  ARC_DATA_EXT='arc-data-bootstrapper'
+  export ARC_DATA_EXT
+fi
+
+if [[ -z "${ARC_DATA_EXT_AUTO_UPGRADE}" ]]; then
+  echo "INFO | variable ARC_DATA_EXT_AUTO_UPGRADE is not set, defaulting to true"
+  ARC_DATA_EXT_AUTO_UPGRADE='true'
+  export ARC_DATA_EXT_AUTO_UPGRADE
+fi
+
+if [[ -z "${ARC_DATA_NAMESPACE}" ]]; then
+  echo "ERROR | variable ARC_DATA_NAMESPACE is required."
+  exit 1
+fi
+
+bootstrapper_version_param=()
+if [[ -n "${ARC_DATA_EXT_VERSION}" ]]; then
+  bootstrapper_version_param+=(--version "${ARC_DATA_EXT_VERSION}")
 fi
 
 custom_location_oid_param=()
@@ -155,7 +191,6 @@ export AZ_CURRENT_ACCOUNT
 
 echo ""
 echo "INFO | Current subscription assigned $AZ_CURRENT_ACCOUNT"
-echo ""
 
 # ====================
 # Central Status Check
@@ -163,23 +198,36 @@ echo ""
 # .
 # └── 1. Connected Cluster and Data Services RG
 #     └── 2. Connected Cluster
+#         ├── 2a. Idempotent - Enable Cluster-Connect and Custom-Locations
 #         ├── 3. Bootstrapper Extension
-#         └── 4. Idempotent feature enablement - Cluster-Connect and Custom-Locations
-#             └── 5. Custom Location (needs cluster-connect and custom-location enabled)
-#                 └── 6. Data Controller
+#         |    └── 3a. Idempotent - Bootstrapper MSI Assignment
+#         └── 4. Custom Location
+#                └── 5. Data Controller
 
 # 1. Connected Cluster and Data Services RG
 CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS=$(az group list | jq -r ".[] | select(.name==\"$CONNECTED_CLUSTER_RESOURCE_GROUP\") |.name")
 export CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS
-ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS=$(az group list | jq -r ".[] | select(.name==\"$ARC_DATA_SERVICES_RESOURCE_GROUP\") |.name")
-export ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS
+ARC_DATA_RESOURCE_GROUP_EXISTS=$(az group list | jq -r ".[] | select(.name==\"$ARC_DATA_RESOURCE_GROUP\") |.name")
+export ARC_DATA_RESOURCE_GROUP_EXISTS
 
 # 1. Check dependents:
-if [[ -n "${CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS}" ]] && [[ -n "${ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS}" ]]; then
+if [[ -n "${CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS}" ]] && [[ -n "${ARC_DATA_RESOURCE_GROUP_EXISTS}" ]]; then
   
   # 2. Connected Cluster
   CONNECTED_CLUSTER_EXISTS=$(az resource list --name "$CONNECTED_CLUSTER" --resource-group "$CONNECTED_CLUSTER_RESOURCE_GROUP" --query "[?contains(type,'Microsoft.Kubernetes/connectedClusters')].name" --output tsv)
   export CONNECTED_CLUSTER_EXISTS
+
+  if [[ -n "${CONNECTED_CLUSTER_EXISTS}" ]]; then
+    # 3. Bootstrapper Extension
+    ARC_DATA_EXT_EXISTS=$(az k8s-extension list --cluster-name "$CONNECTED_CLUSTER" --resource-group "$CONNECTED_CLUSTER_RESOURCE_GROUP" --cluster-type connectedclusters | jq -r ".[] | select(.extensionType==\"microsoft.arcdataservices\") |.name")
+    export ARC_DATA_EXT_EXISTS
+
+    # 4. Custom Location
+    ARC_DATA_CUSTOM_LOCATION_EXISTS=$(az resource list --name "${ARC_DATA_NAMESPACE}" --resource-group "${ARC_DATA_RESOURCE_GROUP}" --query "[?contains(type,'Microsoft.ExtendedLocation/customLocations')].name" --output tsv)
+    export ARC_DATA_CUSTOM_LOCATION_EXISTS
+
+      # 5. Data Controller
+  fi
 
 fi
 
@@ -193,13 +241,17 @@ function true_if_nonempty {
 
 # Update to 'true' or 'false' rather than empty and non-empty
 CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS=$(true_if_nonempty "${CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS}")
-ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS=$(true_if_nonempty "${ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS}")
+ARC_DATA_RESOURCE_GROUP_EXISTS=$(true_if_nonempty "${ARC_DATA_RESOURCE_GROUP_EXISTS}")
 CONNECTED_CLUSTER_EXISTS=$(true_if_nonempty "${CONNECTED_CLUSTER_EXISTS}")
+ARC_DATA_EXT_EXISTS=$(true_if_nonempty "${ARC_DATA_EXT_EXISTS}")
+ARC_DATA_CUSTOM_LOCATION_EXISTS=$(true_if_nonempty "${ARC_DATA_CUSTOM_LOCATION_EXISTS}")
 
 echo ""
-echo "INFO | CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS? $CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS"
-echo "INFO | ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS? $ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS"
-echo "INFO | CONNECTED_CLUSTER_EXISTS? $CONNECTED_CLUSTER_EXISTS"
+echo "INFO | 1. CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS? $CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS"
+echo "INFO | 1. ARC_DATA_RESOURCE_GROUP_EXISTS? $ARC_DATA_RESOURCE_GROUP_EXISTS"
+echo "INFO |  2. CONNECTED_CLUSTER_EXISTS? $CONNECTED_CLUSTER_EXISTS"
+echo "INFO |    3. ARC_DATA_EXT_EXISTS? $ARC_DATA_EXT_EXISTS"
+echo "INFO |    4. ARC_DATA_CUSTOM_LOCATION_EXISTS? $ARC_DATA_CUSTOM_LOCATION_EXISTS"
 echo ""
 
 # ======================
@@ -209,6 +261,19 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
   echo "INFO | Starting Arc + Data Services destruction process"
 
   # ...
+
+  # 3. Bootstrapper Extension
+  if [ "$ARC_DATA_EXT_EXISTS" = 'true' ]; then 
+    echo "INFO | Deleting Bootstrapper Extension $ARC_DATA_EXT"
+    az k8s-extension delete --name "${ARC_DATA_EXT}" \
+                        --cluster-type connectedClusters \
+                        --cluster-name "${CONNECTED_CLUSTER}" \
+                        --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" \
+                        --yes \
+                        ${VERBOSE:+--debug --verbose}
+  else 
+    echo "INFO | Bootstrapper Extension $ARC_DATA_EXT doest not exist, skipping delete"
+  fi
 
   # 2. Connected Cluster
   if [ "$CONNECTED_CLUSTER_EXISTS" = 'true' ]; then 
@@ -222,13 +287,13 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
   fi
 
   # 1. Connected Cluster and Data Services RG
-  if [ "$ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS" = 'true' ]; then 
-    echo "INFO | Deleting Arc Data Services Resource Group $ARC_DATA_SERVICES_RESOURCE_GROUP"
-      az group delete --resource-group "$ARC_DATA_SERVICES_RESOURCE_GROUP" \
+  if [ "$ARC_DATA_RESOURCE_GROUP_EXISTS" = 'true' ]; then 
+    echo "INFO | Deleting Arc Data Services Resource Group $ARC_DATA_RESOURCE_GROUP"
+      az group delete --resource-group "$ARC_DATA_RESOURCE_GROUP" \
                       --yes \
                       ${VERBOSE:+--debug --verbose}
   else 
-    echo "INFO | Arc Data Services Resource Group $ARC_DATA_SERVICES_RESOURCE_GROUP doest not exist, skipping delete"
+    echo "INFO | Arc Data Services Resource Group $ARC_DATA_RESOURCE_GROUP doest not exist, skipping delete"
   fi
 
   if [ "$CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS" = 'true' ]; then 
@@ -260,23 +325,30 @@ else
     export CONNECTED_CLUSTER_RESOURCE_GROUP_EXISTS
 fi
 
-if [ "$ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS" = 'true' ]; then 
-    echo "INFO | Arc Data Services Resource Group $ARC_DATA_SERVICES_RESOURCE_GROUP already exists, skipping create"
+if [ "$ARC_DATA_RESOURCE_GROUP_EXISTS" = 'true' ]; then 
+    echo "INFO | Arc Data Services Resource Group $ARC_DATA_RESOURCE_GROUP already exists, skipping create"
 else 
-    echo "INFO | Creating Arc Data Services Resource Group $ARC_DATA_SERVICES_RESOURCE_GROUP"
-    az group create --resource-group "$ARC_DATA_SERVICES_RESOURCE_GROUP" \
-                    --location "$ARC_DATA_SERVICES_LOCATION" \
+    echo "INFO | Creating Arc Data Services Resource Group $ARC_DATA_RESOURCE_GROUP"
+    az group create --resource-group "$ARC_DATA_RESOURCE_GROUP" \
+                    --location "$ARC_DATA_LOCATION" \
                     ${VERBOSE:+--debug --verbose}
-    ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS='true'
-    export ARC_DATA_SERVICES_RESOURCE_GROUP_EXISTS
+    ARC_DATA_RESOURCE_GROUP_EXISTS='true'
+    export ARC_DATA_RESOURCE_GROUP_EXISTS
 fi
 
 # ====================
 # 2. Connected Cluster
 # ====================
-
 if [ "$CONNECTED_CLUSTER_EXISTS" = 'true' ]; then
     echo "INFO | Connected Cluster $CONNECTED_CLUSTER already exists, skipping create"
+    # 2a. Idempotent: Enable Cluster-Connect and Custom-Locations
+    echo "INFO | Enabling Cluster-Connect and Custom-Locations"
+    az connectedk8s enable-features -n "${CONNECTED_CLUSTER}" \
+                                    -g "${CONNECTED_CLUSTER_RESOURCE_GROUP}" \
+                                    --kube-config $HOME/.kube/config \
+                                    --features cluster-connect custom-locations \
+                                    "${custom_location_oid_param[@]}" \
+                                    ${VERBOSE:+--debug --verbose}
 else 
     echo "INFO | Creating Connected Cluster $CONNECTED_CLUSTER"
     az connectedk8s connect --name "${CONNECTED_CLUSTER}" \
@@ -287,6 +359,46 @@ else
                             ${VERBOSE:+--debug --verbose}
     CONNECTED_CLUSTER_EXISTS='true'
     export CONNECTED_CLUSTER_EXISTS
+fi
+
+# =========================
+# 3. Bootstrapper Extension
+# =========================
+if [ "$ARC_DATA_EXT_EXISTS" = 'true' ]; then
+    echo "INFO | Bootstrapper extension $ARC_DATA_EXT already exists, skipping create"
+    # 3a. Idempotent: Bootstrapper MSI Extension Permissions
+    echo "INFO | Proceeding to SAMI Role Assignments on Data Services Resource Group $ARC_DATA_RESOURCE_GROUP"
+  
+    ARC_DATA_EXT_MSI=$(az k8s-extension show --cluster-name "${CONNECTED_CLUSTER}" --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" --cluster-type connectedClusters --name "${ARC_DATA_EXT}" --query "identity.principalId" --output tsv)
+    export ARC_DATA_EXT_MSI
+    
+    az role assignment create --assignee "${ARC_DATA_EXT_MSI}" --role 'Contributor' --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${ARC_DATA_RESOURCE_GROUP}"
+    az role assignment create --assignee "${ARC_DATA_EXT_MSI}" --role 'Monitoring Metrics Publisher' --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${ARC_DATA_RESOURCE_GROUP}"
+else 
+    echo "INFO | Creating Bootstrapper extension $ARC_DATA_EXT"
+    az k8s-extension create --name "${ARC_DATA_EXT}" \
+                            --extension-type microsoft.arcdataservices \
+                            --cluster-type connectedClusters \
+                            --cluster-name "${CONNECTED_CLUSTER}" \
+                            --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" \
+                            --auto-upgrade "${ARC_DATA_EXT_AUTO_UPGRADE}" \
+                            --scope cluster \
+                            --release-namespace "${ARC_DATA_NAMESPACE}" \
+                            --config Microsoft.CustomLocation.ServiceAccount=sa-arc-bootstrapper \
+                            --config systemDefaultValues.imagePullPolicy="Always" \
+                            "${bootstrapper_version_param[@]}" \
+                            ${VERBOSE:+--debug --verbose}
+    
+    # Check extension status
+    ARC_DATA_EXT_STATUS=$(az k8s-extension show --cluster-name "$CONNECTED_CLUSTER" --resource-group "$CONNECTED_CLUSTER_RESOURCE_GROUP" --cluster-type connectedClusters --name "${ARC_DATA_EXT}" | jq -r '.provisioningState')
+
+    if [ "$ARC_DATA_EXT_STATUS" = 'Succeeded' ]; then
+      ARC_DATA_EXT_EXISTS='true'
+      export ARC_DATA_EXT_EXISTS
+    else
+      echo "ERROR | Bootstrapper extension $ARC_DATA_EXT provisioning status is $ARC_DATA_EXT_STATUS, manual intervention is required"
+      exit 1
+    fi
 fi
 
 echo ""

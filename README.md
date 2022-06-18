@@ -54,14 +54,13 @@ kubectl get nodes
 export containerVersion='0.1.0' # To increment via CI pipeline
 export containerName='kube-arc-data-services-installer-job'
 
-az acr login --name $acrName
-
 cd /workspaces/kube-arc-data-services-installer-job
 
 # Remove Windows Carriage Returns
 dos2unix /workspaces/kube-arc-data-services-installer-job/src/scripts/install-arc-data-services.sh
 
 # Build & Push
+az acr login --name $acrName
 docker build -t $acrName.azurecr.io/$containerName:$containerVersion .
 docker push $acrName.azurecr.io/$containerName:$containerVersion
 ```
@@ -77,12 +76,16 @@ export CLIENT_SECRET=$spnClientSecret
 
 export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"
 export CONNECTED_CLUSTER_LOCATION="eastasia"
-export ARC_DATA_SERVICES_RESOURCE_GROUP="$resourceGroup-arc-data"
-export ARC_DATA_SERVICES_LOCATION="eastasia"
+export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"
+export ARC_DATA_LOCATION="eastasia"
 
 export CONNECTED_CLUSTER=$aksClusterName
-export ARC_DATA_SERVICES_EXT="arc-data-bootstrapper"
-export DELETE_FLAG='true'
+export ARC_DATA_EXT="arc-data-bootstrapper"
+export ARC_DATA_EXT_AUTO_UPGRADE="false"
+export ARC_DATA_EXT_VERSION="1.2.19831003"
+export ARC_DATA_NAMESPACE="azure-arc-data"
+
+export DELETE_FLAG='false'
 
 # Apply CI Kustomize overlay
 k apply -k /workspaces/kube-arc-data-services-installer-job/kustomize/overlays/ci

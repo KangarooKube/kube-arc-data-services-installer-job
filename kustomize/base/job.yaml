@@ -62,20 +62,38 @@ spec:
             secretKeyRef:
               name: azure-arc-kubernetes-bootstrap
               key: CONNECTED_CLUSTER_LOCATION
-        - name: ARC_DATA_SERVICES_RESOURCE_GROUP
+        - name: ARC_DATA_RESOURCE_GROUP
           valueFrom: 
             secretKeyRef:
               name: azure-arc-kubernetes-bootstrap
-              key: ARC_DATA_SERVICES_RESOURCE_GROUP
-        - name: ARC_DATA_SERVICES_LOCATION
+              key: ARC_DATA_RESOURCE_GROUP
+        - name: ARC_DATA_LOCATION
           valueFrom: 
             secretKeyRef:
               name: azure-arc-kubernetes-bootstrap
-              key: ARC_DATA_SERVICES_LOCATION
-        - name: ARC_DATA_SERVICES_EXT
+              key: ARC_DATA_LOCATION
+              optional: true
+        - name: ARC_DATA_EXT
           valueFrom: 
             secretKeyRef:
               name: azure-arc-kubernetes-bootstrap
-              key: ARC_DATA_SERVICES_EXT
+              key: ARC_DATA_EXT
+        - name: ARC_DATA_EXT_AUTO_UPGRADE
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_EXT_AUTO_UPGRADE
+              optional: true
+        - name: ARC_DATA_EXT_VERSION
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_EXT_VERSION
+              optional: true
+        - name: ARC_DATA_NAMESPACE
+          valueFrom: 
+            secretKeyRef:
+              name: azure-arc-kubernetes-bootstrap
+              key: ARC_DATA_NAMESPACE
       restartPolicy: Never
   backoffLimit: 4
