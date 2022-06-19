@@ -10,10 +10,17 @@ spec:
       nodeSelector:
         kubernetes.io/arch: amd64
         kubernetes.io/os: linux
+      volumes:
+      - name: dc-config
+        configMap:
+          name: dc-config
       containers:
       - name: azure-arc-kubernetes-bootstrap
         imagePullPolicy: Always
         image: arccicd9264c4f6acr.azurecr.io/kube-arc-data-services-installer-job:0.0.1
+        volumeMounts:
+        - name: dc-config
+          mountPath: /home/container-user/custom
         env:
         - name: VERBOSE
           value: "false"
@@ -23,82 +30,97 @@ spec:
           value: "900"
         - name: DELETE_FLAG
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: DELETE_FLAG
               optional: true
         - name: TENANT_ID
           valueFrom: 
             secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+              name: secret-envs
               key: TENANT_ID
         - name: SUBSCRIPTION_ID
           valueFrom: 
             secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+              name: secret-envs
               key: SUBSCRIPTION_ID
         - name: CLIENT_ID
           valueFrom: 
             secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+              name: secret-envs
               key: CLIENT_ID
         - name: CLIENT_SECRET
           valueFrom: 
             secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+              name: secret-envs
               key: CLIENT_SECRET
-        - name: CONNECTED_CLUSTER_RESOURCE_GROUP
+        - name: AZDATA_USERNAME
           valueFrom: 
             secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+              name: secret-envs
+              key: AZDATA_USERNAME
+        - name: AZDATA_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: secret-envs
+              key: AZDATA_PASSWORD
+        - name: CONNECTED_CLUSTER_RESOURCE_GROUP
+          valueFrom: 
+            configMapKeyRef:
+              name: config-envs
               key: CONNECTED_CLUSTER_RESOURCE_GROUP
         - name: CONNECTED_CLUSTER
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: CONNECTED_CLUSTER
         - name: CONNECTED_CLUSTER_LOCATION
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: CONNECTED_CLUSTER_LOCATION
         - name: ARC_DATA_RESOURCE_GROUP
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_RESOURCE_GROUP
         - name: ARC_DATA_LOCATION
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_LOCATION
               optional: true
         - name: ARC_DATA_EXT
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_EXT
         - name: ARC_DATA_EXT_AUTO_UPGRADE
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_EXT_AUTO_UPGRADE
               optional: true
         - name: ARC_DATA_EXT_VERSION
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_EXT_VERSION
               optional: true
         - name: ARC_DATA_NAMESPACE
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_NAMESPACE
         - name: ARC_DATA_CONTROLLER
           valueFrom: 
-            secretKeyRef:
-              name: azure-arc-kubernetes-bootstrap
+            configMapKeyRef:
+              name: config-envs
               key: ARC_DATA_CONTROLLER
+        - name: ARC_DATA_CONTROLLER_LOCATION
+          valueFrom: 
+            configMapKeyRef:
+              name: config-envs
+              key: ARC_DATA_CONTROLLER_LOCATION
       restartPolicy: Never
   backoffLimit: 4

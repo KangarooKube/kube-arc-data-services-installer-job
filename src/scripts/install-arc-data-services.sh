@@ -103,6 +103,12 @@ if [[ -z "${ARC_DATA_LOCATION}" ]]; then
   export ARC_DATA_LOCATION
 fi
 
+if [[ -z "${ARC_DATA_CONTROLLER_LOCATION}" ]]; then
+  echo "INFO | variable ARC_DATA_CONTROLLER_LOCATION is not set, defaulting to ARC_DATA_LOCATION"
+  ARC_DATA_CONTROLLER_LOCATION=${ARC_DATA_LOCATION}
+  export ARC_DATA_CONTROLLER_LOCATION
+fi
+
 if [[ -z "${ARC_DATA_EXT}" ]]; then
   echo "INFO | variable ARC_DATA_EXT is not set, defaulting to arc-data-bootstrapper"
   ARC_DATA_EXT='arc-data-bootstrapper'
@@ -123,6 +129,28 @@ fi
 if [[ -z "${ARC_DATA_CONTROLLER}" ]]; then
   echo "ERROR | variable ARC_DATA_CONTROLLER is required."
   exit 1
+fi
+
+if [[ -z "${AZDATA_USERNAME}" ]]; then
+  echo "ERROR | variable AZDATA_USERNAME is required."
+  exit 1
+else
+  echo "INFO | variable AZDATA_USERNAME is set, also defaulting AZDATA_LOGSUI_USERNAME and AZDATA_METRICSUI_USERNAME"
+  AZDATA_LOGSUI_USERNAME=${AZDATA_USERNAME}
+  AZDATA_METRICSUI_USERNAME=${AZDATA_USERNAME}
+  export AZDATA_LOGSUI_USERNAME
+  export AZDATA_METRICSUI_USERNAME
+fi
+
+if [[ -z "${AZDATA_PASSWORD}" ]]; then
+  echo "ERROR | variable AZDATA_PASSWORD is required."
+  exit 1
+else
+  echo "INFO | variable AZDATA_PASSWORD is set, also defaulting AZDATA_LOGSUI_PASSWORD and AZDATA_METRICSUI_PASSWORD"
+  AZDATA_LOGSUI_PASSWORD=${AZDATA_PASSWORD}
+  AZDATA_METRICSUI_PASSWORD=${AZDATA_PASSWORD}
+  export AZDATA_LOGSUI_PASSWORD
+  export AZDATA_METRICSUI_PASSWORD
 fi
 
 bootstrapper_version_param=()
@@ -273,7 +301,16 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
   echo "INFO | Starting Arc + Data Services destruction process"
   
   # 5. Data Controller
-  # TBD
+  if [ "$ARC_DATA_CONTROLLER_EXISTS" = 'true' ]; then 
+    echo "INFO | Deleting Data Controller $ARC_DATA_CONTROLLER"
+    az arcdata dc delete --name "${ARC_DATA_CONTROLLER}" \
+                         --subscription "${SUBSCRIPTION_ID}" \
+                         --resource-group "${ARC_DATA_RESOURCE_GROUP}" \
+                         --yes \
+                         ${VERBOSE:+--debug --verbose}
+  else 
+    echo "INFO | Data Controller $ARC_DATA_CONTROLLER doest not exist, skipping delete"
+  fi
 
   # 4. Custom Location
   if [ "$ARC_DATA_CUSTOM_LOCATION_EXISTS" = 'true' ]; then 
@@ -475,8 +512,45 @@ fi
 # ==================
 # 5. Data Controller
 # ==================
+if [ "$ARC_DATA_CONTROLLER_EXISTS" = 'true' ]; then
+    echo "INFO | Data Controller $ARC_DATA_CONTROLLER already exists, skipping create"
+else 
+    echo "INFO | Creating Data Controller $ARC_DATA_CONTROLLER"
 
-# TBD - need config in ConfigMap first - create one for AKS in Kustomize, one later on for OpenShift
+    az arcdata dc create --path './custom' \
+                         --name "${ARC_DATA_CONTROLLER}" \
+                         --custom-location "${ARC_DATA_NAMESPACE}" \
+                         --subscription "${SUBSCRIPTION_ID}" \
+                         --resource-group "${ARC_DATA_RESOURCE_GROUP}" \
+                         --location "${ARC_DATA_CONTROLLER_LOCATION}" \
+                         --connectivity-mode direct \
+                         ${VERBOSE:+--debug --verbose}
+
+    # Check Data Controller status
+    ARC_DATA_CONTROLLER_STATUS=$(az arcdata dc status show --name "$ARC_DATA_CONTROLLER" --resource-group "$ARC_DATA_RESOURCE_GROUP" | jq -r '.properties.k8SRaw.status.state')
+
+    if [ "$ARC_DATA_CONTROLLER_STATUS" = 'Failed' ]; then
+      echo "ERROR | Data Controller $ARC_DATA_CONTROLLER provisioning status is $ARC_DATA_CONTROLLER_STATUS, manual intervention is required"
+      exit 1
+    else
+      # Loop for 10 minutes, sleeping for 30 seconds each time to see if Data Controller goes to Ready
+      for i in {1..20}
+      do
+        echo "INFO | Waiting for Data Controller $ARC_DATA_CONTROLLER to go to ready state (attempt $i of 20)..."
+        ARC_DATA_CONTROLLER_STATUS=$(az arcdata dc status show --name "$ARC_DATA_CONTROLLER" --resource-group "$ARC_DATA_RESOURCE_GROUP" | jq -r '.properties.k8SRaw.status.state')
+        echo "INFO | Data Controller provisioning status: $ARC_DATA_CONTROLLER_STATUS"
+
+        if [ "$ARC_DATA_CONTROLLER_STATUS" = 'Ready' ]; then
+          ARC_DATA_CONTROLLER_EXISTS='true'
+          export ARC_DATA_CONTROLLER_EXISTS
+          break
+        fi
+
+        echo "INFO | Sleeping for 30 seconds..."
+        sleep 30
+      done
+    fi
+fi
 
 echo ""
 echo "----------------------------------------------------------------------------------"

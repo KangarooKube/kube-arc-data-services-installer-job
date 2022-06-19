@@ -73,8 +73,5 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# Controller Custom profile
-control.json
-
 # Ignore temp folder
 **/.temp/*

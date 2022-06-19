@@ -68,32 +68,35 @@ docker push $acrName.azurecr.io/$containerName:$containerVersion
 ## Deploy manifests
 
 ```bash
-# Set necessary environment variables for Job Secret
+# Set necessary environment variables
+# Secret
 export TENANT_ID=$spnTenantId
 export SUBSCRIPTION_ID=$subscriptionId
 export CLIENT_ID=$spnClientId
 export CLIENT_SECRET=$spnClientSecret
-
+export AZDATA_USERNAME='boor'
+export AZDATA_PASSWORD='acntorPRESTO!'
+# ConfigMap
 export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"
 export CONNECTED_CLUSTER_LOCATION="eastasia"
 export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"
 export ARC_DATA_LOCATION="eastasia"
-
 export CONNECTED_CLUSTER=$aksClusterName
 export ARC_DATA_EXT="arc-data-bootstrapper"
 export ARC_DATA_EXT_AUTO_UPGRADE="false"
 export ARC_DATA_EXT_VERSION="1.2.19831003"
 export ARC_DATA_NAMESPACE="azure-arc-data"
 export ARC_DATA_CONTROLLER="azure-arc-data-controller"
-
+export ARC_DATA_CONTROLLER_LOCATION="southeastasia"
+# Create or Delete
 export DELETE_FLAG='false'
 
 # Apply CI Kustomize overlay
-k apply -k /workspaces/kube-arc-data-services-installer-job/kustomize/overlays/ci
+k apply -k /workspaces/kube-arc-data-services-installer-job/kustomize/overlays/aks
 
 # Tail logs
 k logs job/azure-arc-kubernetes-bootstrap -n azure-arc-kubernetes-bootstrap --follow
 
 # Remove Job
-k delete -k /workspaces/kube-arc-data-services-installer-job/kustomize/overlays/ci
+k delete -k /workspaces/kube-arc-data-services-installer-job/kustomize/overlays/aks
 ```
