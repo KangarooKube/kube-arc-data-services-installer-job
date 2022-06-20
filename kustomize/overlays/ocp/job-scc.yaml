@@ -6,12 +6,12 @@ metadata:
 spec:
   template:
     spec:
+      volumes:
+        - name: openshift-config
+          configMap:
+            name: openshift-config
       containers:
       - name: azure-arc-kubernetes-bootstrap
-        env:
-        - name: VERBOSE
-          value: "false"
-        - name: ONBOARDING_TIMEOUT
-          value: "1200"
-        - name: OPENSHIFT
-          value: "false"
+        volumeMounts:
+        - name: openshift-config
+          mountPath: /home/container-user/openshift

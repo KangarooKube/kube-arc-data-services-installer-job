@@ -1,5 +1,18 @@
 resources:
-  - clusterrolebinding.yaml
   - job.yaml
-  - namespace.yaml
   - serviceaccount.yaml
+  - clusterrolebinding.yaml
+  - namespace.yaml
+configMapGenerator:
+- name: config-envs
+  namespace: azure-arc-kubernetes-bootstrap
+  envs:
+  - configs/configMap.env
+secretGenerator:
+- name: secret-envs
+  namespace: azure-arc-kubernetes-bootstrap
+  envs:
+  - configs/secret.env
+images:
+- name: arccicd9264c4f6acr.azurecr.io/kube-arc-data-services-installer-job
+  newTag: 0.1.0

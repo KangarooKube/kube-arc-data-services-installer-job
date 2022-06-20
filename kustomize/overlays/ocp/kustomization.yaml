@@ -2,9 +2,14 @@ bases:
  - ../../base
 patchesStrategicMerge:
  - env.yaml
+ - job-scc.yaml
 configMapGenerator:
 - name: dc-config
   namespace: azure-arc-kubernetes-bootstrap
   files:
     - configs/control.json
-    
+- name: openshift-config
+  namespace: azure-arc-kubernetes-bootstrap
+  files:
+    - configs/arc-data-scc.yaml
+    - configs/arc-data-routes.yaml

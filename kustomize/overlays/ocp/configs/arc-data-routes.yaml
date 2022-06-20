@@ -1,0 +1,33 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: metricsui
+spec:
+  host: metricsui.apps.arcci.fg.contoso.com
+  port:
+    targetPort: grafana-external-port
+  tls:
+    termination: passthrough 
+    insecureEdgeTerminationPolicy: None 
+  to:
+    kind: Service
+    name: metricsui-external-svc
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: logsui
+spec:
+  host: logsui.apps.arcci.fg.contoso.com
+  port:
+    targetPort: logsui-external-port
+  tls:
+    termination: passthrough 
+    insecureEdgeTerminationPolicy: None 
+  to:
+    kind: Service
+    name: logsui-external-svc
+    weight: 100
+  wildcardPolicy: None

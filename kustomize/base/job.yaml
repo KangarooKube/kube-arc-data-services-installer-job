@@ -28,6 +28,8 @@ spec:
           value: 51dfe1e8-70c6-4de5-a08e-e18aff23d815
         - name: ONBOARDING_TIMEOUT
           value: "900"
+        - name: OPENSHIFT
+          value: "false"
         - name: DELETE_FLAG
           valueFrom: 
             configMapKeyRef:

@@ -48,6 +48,15 @@ if [[ -z "${DELETE_FLAG}" ]]; then
   export DELETE_FLAG='false'
 fi
 
+if [[ -z "${OPENSHIFT}" ]]; then
+  echo "INFO | OPENSHIFT is not set, defaulting to false"
+  export OPENSHIFT='false'
+fi
+
+if [ "${OPENSHIFT}" = 'true' ]; then
+  echo "INFO | Onboarding will run in context for OpenShift"
+fi
+
 if [ "${DELETE_FLAG}" = 'false' ]; then
   echo "INFO | Starting Arc + Data Services onboarding process"
 fi
@@ -341,10 +350,6 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
     echo "INFO | Deleting Arc Data Mutating Webhook Configs"
     kubectl delete mutatingwebhookconfiguration arcdata.microsoft.com-webhook-"${ARC_DATA_NAMESPACE}"
 
-    # Delete Arc Data Namespace
-    echo "INFO | Deleting Arc Data Namespace"
-    kubectl delete namespace "${ARC_DATA_NAMESPACE}"
-
   else 
     echo "INFO | Bootstrapper Extension $ARC_DATA_EXT doest not exist, skipping delete"
   fi
@@ -379,10 +384,32 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
     echo "INFO | Connected Cluster Resource Group $CONNECTED_CLUSTER_RESOURCE_GROUP doest not exist, skipping delete"
   fi
 
+  # 0. Handle OpenShift pre-req cleanup
+  if [ "${OPENSHIFT}" = 'true' ]; then
+    echo "INFO | Removing OpenShift pre-reqs"
+    kubectl delete -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-routes.yaml'
+    kubectl delete -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-scc.yaml'
+  fi
+
+  echo "INFO | Deleting Arc Data Namespace"
+  kubectl delete namespace "${ARC_DATA_NAMESPACE}"
+
   echo ""
   echo "----------------------------------------------------------------------------------"
   echo "INFO | Destruction complete."
   exit 0
+fi
+
+# ==========================================
+# 0. Idempotent: OpenShift pre-reqs creation
+# ==========================================
+if [ "${OPENSHIFT}" = 'true' ]; then
+  echo "INFO | Applying OpenShift pre-reqs"
+  # Create namespace if not exists via apply
+  kubectl create namespace "${ARC_DATA_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+
+  # Create resources at namespace scope - cluster scoped resources will be created outside namespace automatically
+  kubectl apply -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-scc.yaml'
 fi
 
 # =========================================
@@ -550,6 +577,12 @@ else
         sleep 30
       done
     fi
+fi
+
+# 5a. Idempotent: Apply OpenShift routes to Data Controller Monitoring UI
+if [ "${OPENSHIFT}" = 'true' ]; then
+  echo "INFO | Applying OpenShift routes to Data Controller $ARC_DATA_CONTROLLER"
+  kubectl apply -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-routes.yaml'
 fi
 
 echo ""

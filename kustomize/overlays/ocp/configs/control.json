@@ -5,7 +5,7 @@
         "name": "datacontroller"
     },
     "spec": {
-        "infrastructure": "azure",
+        "infrastructure": "onpremises",
         "credentials": {
             "serviceAccount": "sa-arc-controller",
             "dockerRegistry": "arc-private-registry",
@@ -19,30 +19,31 @@
         },
         "storage": {
             "data": {
-                "className": "managed-premium",
+                "className": "thin",
                 "accessMode": "ReadWriteOnce",
                 "size": "50Gi"
             },
             "logs": {
-                "className": "managed-premium",
+                "className": "thin",
                 "accessMode": "ReadWriteOnce",
                 "size": "50Gi"
             }
         },
         "security": {
-            "allowDumps": true,
+            "allowDumps": false,
             "allowNodeMetricsCollection": true,
             "allowPodMetricsCollection": true
         },
         "services": [
             {
                 "name": "controller",
-                "serviceType": "LoadBalancer",
+                "serviceType": "NodePort",
                 "port": 30080
             }
         ],
         "settings": {
             "azure": {
+                "enableManagedIdentityAutoUpload": "false",
                 "autoUploadMetrics": "false",
                 "autoUploadLogs": "false"
             },
