@@ -75,3 +75,6 @@ terraform.rc
 
 # Ignore temp folder
 **/.temp/*
+
+# Kubeconfigs
+kubeconfig
