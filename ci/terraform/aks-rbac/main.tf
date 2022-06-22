@@ -1,5 +1,5 @@
 module "resource_group" {
-  source          = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/misc/resource-group?v0.0.1"
+  source          = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/misc/resource-group?ref=v0.0.1"
   resource_prefix = var.resource_prefix
   location        = var.location
   tags            = var.tags
@@ -7,7 +7,7 @@ module "resource_group" {
 
 module "log_ws" {
   depends_on = [module.resource_group]
-  source          = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/monitoring/log-analytics?v0.0.1"
+  source          = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/monitoring/log-analytics?ref=v0.0.1"
   resource_prefix = var.resource_prefix
   resource_group_name = module.resource_group.resource_group_name
   resource_group_location = module.resource_group.resource_group_location
@@ -16,7 +16,7 @@ module "log_ws" {
 
 module "acr" {
   depends_on = [module.resource_group]
-  source     = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/kubernetes/acr"
+  source     = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/kubernetes/acr?ref=v0.0.1"
   resource_prefix = var.resource_prefix
   resource_group_name = module.resource_group.resource_group_name
   resource_group_location = module.resource_group.resource_group_location
@@ -25,7 +25,7 @@ module "acr" {
 
 module "aks" {
   depends_on = [module.resource_group, module.log_ws]
-  source     = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/kubernetes/aks"
+  source     = "git::https://github.com/KangarooKube/terraform-infrastructure-modules.git//modules/kubernetes/aks?ref=v0.0.1"
   resource_prefix = var.resource_prefix
   resource_group_name = module.resource_group.resource_group_name
   resource_group_location = module.resource_group.resource_group_location

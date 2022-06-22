@@ -45,7 +45,7 @@ export TF_VAR_tags='{ Source = "terraform", Owner = "Your Name", Project = "Mess
 Configure Azure Storage Account Backend State info before running `init`:
 
 ```bash
-export stateFileKeyName="aks-rbac-yes/${TF_VAR_resource_prefix}/terraform.tfstate"
+export stateFileKeyName="kube-arc-data-services-installer-job/${TF_VAR_resource_prefix}/terraform.tfstate"
 export TF_CLI_ARGS_init="-backend-config='storage_account_name=${TFSTATE_STORAGE_ACCOUNT_NAME}'"
 export TF_CLI_ARGS_init="$TF_CLI_ARGS_init -backend-config='container_name=${TFSTATE_STORAGE_ACCOUNT_CONTAINER_NAME}'"
 export TF_CLI_ARGS_init="$TF_CLI_ARGS_init -backend-config='access_key=${TFSTATE_STORAGE_ACCOUNT_KEY}'"
