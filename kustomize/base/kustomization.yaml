@@ -14,5 +14,5 @@ secretGenerator:
   envs:
   - configs/secret.env
 images:
-- name: arccicd9264c4f6acr.azurecr.io/kube-arc-data-services-installer-job
-  newTag: 0.1.0
+- name: {{ REPLACE_CONTAINER_REGISTRY }}/kube-arc-data-services-installer-job
+  newTag: {{ REPLACE_TAG }}

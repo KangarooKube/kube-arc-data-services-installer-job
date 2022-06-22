@@ -3,57 +3,19 @@ Kubernetes job for installing Azure ARC and Azure ARC Data Services on a Kuberne
 
 | Tested on AKS and OpenShift 4.10.16
 
-## AKS Environment spinup
-```bash
-# ---------------------
-# ENVIRONMENT VARIABLES
-# For Terraform
-# ---------------------
-export TF_VAR_SPN_CLIENT_ID=$spnClientId
-export TF_VAR_SPN_CLIENT_SECRET=$spnClientSecret
-export TF_VAR_SPN_TENANT_ID=$spnTenantId
-export TF_VAR_SPN_SUBSCRIPTION_ID=$subscriptionId
-export TF_VAR_resource_prefix='arccicd'
-export TF_VAR_tags='{ Source = "terraform", Owner = "Raki", Project = "CICD Testing for Arc" }'
+## Environment spinup
 
-cd /workspaces/kube-arc-data-services-installer-job/test/terraform
+You will need:
+* A Kubernetes Cluster
+* A Container Registry to build and push images to
 
-# ---------------------
-# DEPLOY TERRAFORM
-# ---------------------
-terraform init
-terraform plan
-terraform apply -auto-approve
-```
-
-> OpenShift Env setup TBD.
-
-## Build and push image to ACR
-
-```bash
-# ---------------------
-# EXTRACT OUTPUTS
-# ---------------------
-export resourceGroup=$(terraform output --raw resource_group_name)
-export aksClusterName=$(terraform output --raw aks_name)
-export acrName=$(terraform output --raw acr_name)
-
-export containerVersion='0.1.0' # To increment via CI pipeline
-export containerName='kube-arc-data-services-installer-job'
-
-cd /workspaces/kube-arc-data-services-installer-job
-
-# Remove Windows Carriage Returns
-dos2unix /workspaces/kube-arc-data-services-installer-job/src/scripts/install-arc-data-services.sh
-
-# Build & Push
-az acr login --name $acrName
-docker build -t $acrName.azurecr.io/$containerName:$containerVersion .
-docker push $acrName.azurecr.io/$containerName:$containerVersion
-```
+Follow the steps [here](ci/terraform/aks-rbac/README.md) to deploy an environment using Terraform, the same environment our CI runs use.
 
 ## Deploy manifests
 
+### Image tag
+
+> You must update the Container Registry URL [here](kustomize/base/kustomization.yaml) per your environment.
 ### Variables for `ConfigMap` and `Secret`
 
 Same set works for AKS and OpenShift - kustomize overlay contains the differences:
