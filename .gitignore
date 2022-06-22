@@ -78,3 +78,6 @@ terraform.rc
 
 # Kubeconfigs
 kubeconfig
+
+# Generated kustomization files
+**/base/kustomization.yaml
