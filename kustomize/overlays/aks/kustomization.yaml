@@ -7,4 +7,6 @@ configMapGenerator:
   namespace: azure-arc-kubernetes-bootstrap
   files:
     - configs/control.json
-    
+images:
+- name: testacr.azurecr.io/kube-arc-data-services-installer-job
+  newTag: 0.1.0

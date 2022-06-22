@@ -102,8 +102,10 @@ ARG BINARY=yq_linux_386
 RUN wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/bin/yq \ 
     && chmod +x /usr/bin/yq
 
-# Clean up
-RUN apt-get autoremove -y \
+# Install envsubst and clean up
+RUN apt-get update \
+    && apt-get install -y gettext-base \
+    && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/downloads

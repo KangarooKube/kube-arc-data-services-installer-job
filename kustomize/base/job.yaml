@@ -17,7 +17,7 @@ spec:
       containers:
       - name: azure-arc-kubernetes-bootstrap
         imagePullPolicy: Always
-        image: arccicd9264c4f6acr.azurecr.io/kube-arc-data-services-installer-job:0.0.1
+        image: kube-arc-data-services-installer-job
         volumeMounts:
         - name: dc-config
           mountPath: /home/container-user/custom

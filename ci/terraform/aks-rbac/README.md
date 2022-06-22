@@ -63,7 +63,6 @@ terraform apply -auto-approve
 Grab outputs:
 
 ```bash
-export resourceGroup=$(terraform output --raw resource_group_name)
 export acrName=$(terraform output --raw acr_name)
 ```
 
@@ -80,16 +79,12 @@ Build and push docker image:
 export containerVersion='0.1.0' # To increment via CI pipeline
 export containerName='kube-arc-data-services-installer-job'
 
-cd /workspaces/kube-arc-data-services-installer-job
-
 # Remove Windows Carriage Returns
 dos2unix /workspaces/kube-arc-data-services-installer-job/src/scripts/install-arc-data-services.sh
 
 # Build & Push
-az login --service-principal --username $spnClientId --password $spnClientSecret --tenant $spnTenantId
-az account set --subscription $subscriptionId
-az config set extension.use_dynamic_install=yes_without_prompt
-az acr login --name $acrName
+cd /workspaces/kube-arc-data-services-installer-job
+docker login $acrName.azurecr.io -u $spnClientId -p $spnClientSecret
 docker build -t $acrName.azurecr.io/$containerName:$containerVersion .
 docker push $acrName.azurecr.io/$containerName:$containerVersion
 ```
@@ -102,5 +97,4 @@ Clean up when you're done:
 terraform destroy -auto-approve
 rm -rf .terraform
 rm .terraform.lock.hcl
-rm kubeconfig
 ```

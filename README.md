@@ -13,15 +13,24 @@ Follow the steps [here](ci/terraform/aks-rbac/README.md) to deploy an environmen
 
 ## Deploy manifests
 
-### Image tag
+### Update image tag from env variable via `envsubst`
 
-> You must update the Container Registry URL [here](kustomize/base/kustomization.yaml) per your environment.
+```bash
+export IMAGE_REGISTRY="${acrName}.azurecr.io"
+export IMAGE_TAG="${containerVersion}"
+export BASE_PATH="/workspaces/kube-arc-data-services-installer-job/kustomize/base"
+
+envsubst \
+    < $BASE_PATH/kustomization.template.yaml \
+    > $BASE_PATH/kustomization.yaml
+```
+
 ### Variables for `ConfigMap` and `Secret`
 
 Same set works for AKS and OpenShift - kustomize overlay contains the differences:
 ```bash
-export resourceGroup='arcjob-rg'
-export clusterName='arc-k8s'
+export resourceGroup='arcjob-rg'                              # Will create if not exists
+export clusterName='arc-k8s'                                  # Can be anything
 # Secret
 export TENANT_ID=$spnTenantId
 export SUBSCRIPTION_ID=$subscriptionId
@@ -31,16 +40,16 @@ export AZDATA_USERNAME='boor'
 export AZDATA_PASSWORD='acntorPRESTO!'
 # ConfigMap
 export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"
-export CONNECTED_CLUSTER_LOCATION="eastasia"
+export CONNECTED_CLUSTER_LOCATION="eastasia"                  # Where Arc Connected Cluster RG will be created
 export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"
-export ARC_DATA_LOCATION="eastasia"
+export ARC_DATA_LOCATION="eastasia"                           # Where Arc Data RG will be created - can be different from Connected Cluster
 export CONNECTED_CLUSTER=$clusterName
 export ARC_DATA_EXT="arc-data-bootstrapper"
 export ARC_DATA_EXT_AUTO_UPGRADE="false"
-export ARC_DATA_EXT_VERSION="1.2.19831003"
+export ARC_DATA_EXT_VERSION="1.2.19831003"                    # Can update per release to test
 export ARC_DATA_NAMESPACE="azure-arc-data"
 export ARC_DATA_CONTROLLER="azure-arc-data-controller"
-export ARC_DATA_CONTROLLER_LOCATION="southeastasia"
+export ARC_DATA_CONTROLLER_LOCATION="southeastasia"           # Based on RP availability
 # false = onboard Arc
 # delete = destroy Arc
 # Both are idempotent
