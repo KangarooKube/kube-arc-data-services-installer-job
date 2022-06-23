@@ -29,10 +29,10 @@ envsubst \
 
 Same set works for AKS and OpenShift - kustomize overlay contains the differences:
 ```bash
-export resourceGroup='arcjob-rg'                              # Will create if not exists
+export resourceGroup='arcjob-rg'                              # Prefix to append to the two RGs below
 export clusterName='arc-k8s'                                  # Can be anything
 # Secret
-export TENANT_ID=$spnTenantId
+export TENANT_ID=$spnTenantId                                 # Passed into Job to authenticate to Azure to create resources
 export SUBSCRIPTION_ID=$subscriptionId
 export CLIENT_ID=$spnClientId
 export CLIENT_SECRET=$spnClientSecret

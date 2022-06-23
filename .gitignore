@@ -53,7 +53,9 @@ crash.*.log
 *.tfvars
 *.tfvars.json
 .terraform.lock.hcl
-*/.terraform/*
+**/.terraform/*
+**/.test-data/*
+
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in

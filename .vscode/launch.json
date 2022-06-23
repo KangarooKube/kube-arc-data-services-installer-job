@@ -8,8 +8,9 @@
             "name": "Launch Package",
             "type": "go",
             "request": "launch",
-            "mode": "auto",                 // This works for both entry points and tests
-            "program": "${fileDirname}"
+            "mode": "auto",            // This works for both entry points and tests
+            "program": "${fileDirname}",
+            "args": ["-test.v"]        // Debugger prints verbose logs for test
         } 
     ]
 }
