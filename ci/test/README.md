@@ -53,6 +53,8 @@ go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 SKIP_teardown_aks=true \
 SKIP_deploy_aks=true \
 SKIP_validate_aks=true \
+SKIP_build_and_push_image=true \
+SKIP_onboard_arc=true \
 SKIP_destroy_arc=true \
 go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 # ...

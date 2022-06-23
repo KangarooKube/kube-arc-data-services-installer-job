@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -88,11 +89,14 @@ func TestAksIntegrationWithStages(t *testing.T) {
 		runJobWithK8s(t, aksTfOpts, tempKustomizedManifestPath)
 	})
 
-	// Arc should now be onboarded - perform validations
-	// TODO: Validate Arc in both K8s and ARM
+	test_structure.RunTestStage(t, "validate_arc_onboarding", func() {
+		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
 
-	// TODO: New Stage: Arc K8s checks
-	// TODO: New Stage: Arc ARM checks
+		validateArcOnboardedWithK8s(t, aksTfOpts)
+
+		// TODO: Arc ARM checks
+
+	})
 
 	test_structure.RunTestStage(t, "destroy_arc", func() {
 		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
@@ -112,8 +116,8 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 	// Arc should now be destroyed - perform validations
 
-	// TODO: New Stage: Arc K8s checks
-	// TODO: New Stage: Arc ARM checks
+	// TODO: New Stage: Arc K8s checks - check CRD's that have "microsoft" or "azure" in the name
+
 }
 
 // Creates Terraform Options with remote state backend
@@ -274,4 +278,39 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 	} else {
 		t.Fatal("DELETE_FLAG is not correctly set")
 	}
+}
+
+// Calls Kubernetes to get post-deployment health checks done
+func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
+	// Namespace: "azure-arc" - which is static
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), "azure-arc")
+
+	// Get Last Connectivity Time for connected cluster
+	jsonPathQuery := "{.items[*]['status.lastConnectivityTime']}"
+	clusterConnectTime, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "connectedclusters", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery)) // %q adds quotes
+	require.NoError(t, err)
+	t.Logf("Last Cluster Connectivity Time (UTC): %s", clusterConnectTime)
+
+	t.Run("k8s_ensure_cluster_connectivity_time_not_empty", func(t *testing.T) {
+		assert.NotEmpty(t, clusterConnectTime, "Cluster Connectivity Time is not empty")
+	})
+
+	// Get Data Controller Health Status
+	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), os.Getenv("ARC_DATA_NAMESPACE"))
+
+	jsonPathQuery = "{.items[*]['status']}"
+	controllerStatus, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
+	require.NoError(t, err)
+	t.Logf("Controller Status: %s", controllerStatus)
+
+	jsonPathQuery = "{.items[*]['status.state']}"
+	controllerState, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
+	require.NoError(t, err)
+	controllerState = regexp.MustCompile(`^"(.*)"$`).ReplaceAllString(controllerState, `$1`) // Remove quotes
+	t.Logf("Controller State: %s", controllerState)
+
+	t.Run("k8s_ensure_controller_is_ready", func(t *testing.T) {
+		assert.Equal(t, "ready", strings.ToLower(controllerState), "Controller is in Ready State")
+	})
+
 }
