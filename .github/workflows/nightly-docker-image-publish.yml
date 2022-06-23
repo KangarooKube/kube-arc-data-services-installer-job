@@ -89,7 +89,7 @@ jobs:
       # Display scan report
       - name: Inspect action SARIF report
         run: cat ${{ steps.scan.outputs.sarif }}
-        if: ${{ steps.scan-image.conclusion == 'failure' || steps.scan-image.conclusion == 'failure' }}
+        if: ${{ always() }}
         
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
