@@ -1,11 +1,18 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/stretchr/testify/require"
+
+	// Azure
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/hybridkubernetes/armhybridkubernetes"               // Connected Cluster
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/kubernetesconfiguration/armkubernetesconfiguration" // Extensions
 )
 
 // Injects environment variables for Arc ConfigMap/Secret creation for Kustomize
@@ -62,4 +69,39 @@ func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
 		os.Setenv("ARC_DATA_CONTROLLER_LOCATION", "southeastasia")
 	}
 	os.Setenv("DELETE_FLAG", "false")
+}
+
+// Retrieves the Azure Arc Connected Cluster Get response
+func getConnectedClusterProperties(t *testing.T, ctx context.Context, cred azcore.TokenCredential, resourceGroupName, clusterName string) *armhybridkubernetes.ConnectedClusterClientGetResponse {
+	connectedClusterClient, err := armhybridkubernetes.NewConnectedClusterClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), cred, nil)
+	require.NoError(t, err)
+
+	clusterResponse, err := connectedClusterClient.Get(
+		ctx,
+		resourceGroupName,
+		clusterName,
+		nil,
+	)
+	require.NoError(t, err)
+
+	return &clusterResponse
+}
+
+// Retrieves list of Azure Arc Connected Cluster Extensions
+func getConnectedClusterExtension(t *testing.T, ctx context.Context, cred azcore.TokenCredential, resourceGroupName, clusterName, extensionName string) *armkubernetesconfiguration.ExtensionsClientGetResponse {
+	extensionClient, err := armkubernetesconfiguration.NewExtensionsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), cred, nil)
+	require.NoError(t, err)
+
+	extensionResponse, err := extensionClient.Get(
+		ctx,
+		resourceGroupName,
+		"Microsoft.Kubernetes",
+		"connectedClusters",
+		clusterName,
+		extensionName,
+		nil,
+	)
+	require.NoError(t, err)
+
+	return &extensionResponse
 }

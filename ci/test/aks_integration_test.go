@@ -2,6 +2,7 @@ package test
 
 import (
 	// Native
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -91,11 +92,11 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 	test_structure.RunTestStage(t, "validate_arc_onboarding", func() {
 		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		setArcJobVariables(t, aksTfOpts) // Used during tests
 
 		validateArcOnboardedWithK8s(t, aksTfOpts)
-
-		// TODO: Arc ARM checks
-
+		validateConnectedClusterWithARM(t, aksTfOpts)
+		// validateDataServicesWithARM(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "destroy_arc", func() {
@@ -115,7 +116,6 @@ func TestAksIntegrationWithStages(t *testing.T) {
 	})
 
 	// Arc should now be destroyed - perform validations
-
 	// TODO: New Stage: Arc K8s checks - check CRD's that have "microsoft" or "azure" in the name
 
 }
@@ -312,5 +312,58 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	t.Run("k8s_ensure_controller_is_ready", func(t *testing.T) {
 		assert.Equal(t, "ready", strings.ToLower(controllerState), "Controller is in Ready State")
 	})
-
 }
+
+// Function calls ARM to validate the Connected Cluster
+func validateConnectedClusterWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
+	// Authenticate to Azure and initiate context
+	cred := getAzureCred(t)
+	ctx := context.Background()
+
+	// This is defined in our module
+	expectedConnectedClusterRg := os.Getenv("CONNECTED_CLUSTER_RESOURCE_GROUP")
+	expectedClusterName := os.Getenv("CONNECTED_CLUSTER")
+
+	// Get Connected Cluster Properties
+	clusterProperty := getConnectedClusterProperties(t, ctx, cred, expectedConnectedClusterRg, expectedClusterName)
+
+	t.Run("arm_ensure_cluster_connectivity_time_not_empty", func(t *testing.T) {
+		assert.NotEmpty(t, *clusterProperty.ConnectedCluster.Properties.LastConnectivityTime, "Cluster Connectivity Time is not empty")
+	})
+
+	t.Run("arm_ensure_cluster_connectivity_time_is_connected", func(t *testing.T) {
+		assert.Equal(t, "connected", strings.ToLower(string(*clusterProperty.ConnectedCluster.Properties.ConnectivityStatus)), "Cluster is Connected")
+	})
+
+	// Get Data Services Extension
+	extensionProperty := getConnectedClusterExtension(t, ctx, cred, expectedConnectedClusterRg, expectedClusterName, os.Getenv("ARC_DATA_EXT"))
+
+	t.Run("arm_ensure_data_service_bootstrapper_extension_is_installed", func(t *testing.T) {
+		assert.Equal(t, "succeeded", strings.ToLower(string(*extensionProperty.Properties.ProvisioningState)), "Data Services Extension is installed")
+	})
+
+	t.Run("arm_ensure_is_type_data_services", func(t *testing.T) {
+		assert.Equal(t, strings.ToLower("microsoft.arcdataservices"), strings.ToLower(string(*extensionProperty.Properties.ExtensionType)), "Extension is for Data Services")
+	})
+
+	t.Run("arm_ensure_data_service_bootstrapper_extension_is_not_auto_upgraded", func(t *testing.T) {
+		assert.Equal(t, false, *extensionProperty.Properties.AutoUpgradeMinorVersion, "Data Services Extension Auto Upgrade is disabled")
+	})
+
+	t.Run("arm_ensure_data_service_bootstrapper_extension_matches_declared_state", func(t *testing.T) {
+		assert.Equal(t, os.Getenv("ARC_DATA_EXT_VERSION"), *extensionProperty.Properties.Version, "Data Services Extension correct version is installed")
+	})
+}
+
+// // Function calls ARM to validate Data Services
+// func validateDataServicesWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
+// 	// Authenticate to Azure and initiate context
+// 	cred := getAzureCred(t)
+// 	ctx := context.Background()
+
+// 	// This is defined in our module
+// 	expectedDataServiceRg := os.Getenv("ARC_DATA_RESOURCE_GROUP")
+// 	expectedCustomLocationName := os.Getenv("ARC_DATA_NAMESPACE")
+// 	expectedDataControllerName := os.Getenv("ARC_DATA_CONTROLLER")
+// TO BE CONTINUED
+// }
