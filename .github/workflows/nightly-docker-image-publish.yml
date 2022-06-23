@@ -78,6 +78,7 @@ jobs:
       
       # Local scan image for vulnerabilities 
       - name: Scan image
+        id: scan-image
         uses: anchore/scan-action@v3.2.5
         with:
           image: ${{ steps.meta.outputs.tags }}-scan
@@ -88,6 +89,7 @@ jobs:
       # Display scan report
       - name: Inspect action SARIF report
         run: cat ${{ steps.scan.outputs.sarif }}
+        if: ${{ steps.scan-image.conclusion == 'failure' || steps.scan-image.conclusion == 'failure' }}
         
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
