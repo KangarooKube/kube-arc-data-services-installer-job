@@ -1,0 +1,28 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+  push:
+    # Clean this up after
+    branches:
+      - '*'
+
+  workflow_dispatch:
+    inputs:
+      log_Level:
+        description: 'Log level'
+        required: true
+        default: 'verbose'    # We can set last working config here
+
+env:
+  INPUT_LOG_LEVEL: ${{ github.event.inputs.log_Level }}
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print input
+        run: echo "The log level is $INPUT_LOG_LEVEL"
