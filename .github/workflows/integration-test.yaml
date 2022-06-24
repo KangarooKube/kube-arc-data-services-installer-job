@@ -1,19 +1,32 @@
-name: Integration Tests (Interactive)
+name: Integration Tests
 
 on:
-  workflow_dispatch:
-    inputs:
-      name:
-        description: 'Person to greet'
-        default: 'World'
-        required: true
+  pull_request:
+    branches:
+      - 'main'
 
+  # For initial testing purposes - remove to not break the bank!
+  push:
+    branches:
+      - '*'
+
+# Replace these to modify Job parameters
 env:
-  PERSON_NAME: ${{ github.event.inputs.name }}
+  AZDATA_USERNAME : boor
+  AZDATA_PASSWORD : acntorPRESTO!
+  CONNECTED_CLUSTER_LOCATION : eastasia
+  ARC_DATA_LOCATION : eastasia
+  CONNECTED_CLUSTER : clusterName
+  ARC_DATA_EXT : arc-data-bootstrapper
+  ARC_DATA_EXT_AUTO_UPGRADE : false
+  ARC_DATA_EXT_VERSION : 1.2.19831003
+  ARC_DATA_NAMESPACE : azure-arc-data
+  ARC_DATA_CONTROLLER : azure-arc-data-controller
+  ARC_DATA_CONTROLLER_LOCATION : southeastasia
 
 jobs:
-  greet:
+  job1:
     runs-on: ubuntu-latest
     steps:
-    - name: Send greeting
-      run: echo "Hello ${{ env.PERSON_NAME }}"
+      - name: Print input
+        run: echo "The extension is $ARC_DATA_EXT_VERSION"
