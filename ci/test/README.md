@@ -49,6 +49,8 @@ MODULE_PATH='/workspaces/kube-arc-data-services-installer-job/ci/terraform/aks-r
 rm -rf ${MODULE_PATH}/.terraform
 rm -rf ${MODULE_PATH}/.test-data
 rm -rf ${MODULE_PATH}/.terraform.lock.hcl
+rm -rf ${MODULE_PATH}/terraform.tfstate
+rm -rf ${MODULE_PATH}/terraform.tfstate.backup
 
 # 1. Deploy fully one-time, skip destruction
 SKIP_teardown_aks=true \
