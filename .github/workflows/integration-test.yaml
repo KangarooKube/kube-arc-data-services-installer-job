@@ -12,6 +12,10 @@ on:
 
 # Replace these to modify Job parameters
 env:
+  SPN_CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
+  SPN_CLIENT_SECRET: ${{ secrets.SPN_CLIENT_SECRET }}
+  SPN_SUBSCRIPTION_ID: ${{ secrets.SPN_SUBSCRIPTION_ID }}
+  SPN_TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
   AZDATA_USERNAME : boor
   AZDATA_PASSWORD : acntorPRESTO!
   CONNECTED_CLUSTER_LOCATION : eastasia
@@ -25,8 +29,42 @@ env:
   ARC_DATA_CONTROLLER_LOCATION : southeastasia
 
 jobs:
-  job1:
+  go-tests:
+    name: Run Integration Tests (terratest) on Kubernetes Cluster
     runs-on: ubuntu-latest
+
     steps:
-      - name: Print input
-        run: echo "The extension is $ARC_DATA_EXT_VERSION"
+
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.18
+
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.2.3
+          terraform_wrapper: false
+
+      - name: Install Docker
+        uses: docker-practice/actions-setup-docker@master
+        run: docker version
+
+      - uses: azure/setup-kubectl@v2.0
+        id: install-kubectl
+        run: kubectl version
+
+      # - name: Download Go modules
+      #   working-directory: ci/test
+      #   run: go mod download
+
+      # - name: Run Integration tests
+      #   working-directory: ci/test
+        
+      #   # Pass in SPN before the run
+      #   env:
+      #     SPN_CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
+      #     SPN_CLIENT_SECRET: ${{ secrets.SPN_CLIENT_SECRET }}
+      #     SPN_SUBSCRIPTION_ID: ${{ secrets.SPN_SUBSCRIPTION_ID }}
+      #     SPN_TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
+      #   run: make integration-test

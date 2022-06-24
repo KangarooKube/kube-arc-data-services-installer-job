@@ -31,7 +31,7 @@ jobs:
         working-directory: ci/test
         run: go mod download
 
-      - name: Run tests
+      - name: Run Unit tests
         working-directory: ci/test
         # We only include the SPN because our Job will not be deployed here
         env:
