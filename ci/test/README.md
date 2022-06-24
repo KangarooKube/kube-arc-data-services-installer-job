@@ -57,6 +57,6 @@ go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 # ...
 
 # 3. Destroy when done development
-SKIP_deploy_aksTf=true \
+SKIP_deploy_aks=true \
 go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 ```
