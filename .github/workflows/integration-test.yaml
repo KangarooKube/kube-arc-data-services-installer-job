@@ -1,13 +1,18 @@
 name: Integration Tests
-'on':
-  schedule:
-    - cron: 45 0 * * *
-  push:
-    branches:
-      - '*'                             # No infra required, so we can run these per push
+
+on:
   pull_request:
     branches:
-      - main
+      - 'main'
+  push:
+    # Integration tests are cheap, so we can run them on every branch
+    branches:
+      - '*' 
+
+concurrency:
+  group: ${{ github.head_ref || github.ref_name }} 
+  cancel-in-progress: false
+
 jobs:
   go-tests:
     name: Run Integration Tests (terratest)
@@ -26,10 +31,10 @@ jobs:
         run: go mod download
       - name: Run tests
         working-directory: ci/test
-        run: make integration-test
         # We only include the SPN because our Job will not be deployed here
         env:
-          SPN_CLIENT_ID: ${{secrets.SPN_CLIENT_ID}}
+          SPN_CLIENT_ID: TEST-ENTRY
           SPN_CLIENT_SECRET: ${{secrets.SPN_CLIENT_SECRET}}
           SPN_SUBSCRIPTION_ID: ${{secrets.SPN_SUBSCRIPTION_ID}}
           SPN_TENANT_ID: ${{secrets.SPN_TENANT_ID}}
+        run: make integration-test
