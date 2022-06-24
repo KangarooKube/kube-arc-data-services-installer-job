@@ -21,10 +21,10 @@ import (
 // This function first checks if a value is already passed in, if not, it sets reasonable defaults
 
 // Full list:
-// export TENANT_ID=$spnTenantId                                 # Set from existing env variable
-// export SUBSCRIPTION_ID=$subscriptionId						 #                 "
-// export CLIENT_ID=$spnClientId								 #                 "
-// export CLIENT_SECRET=$spnClientSecret					     #                 "
+// export TENANT_ID=$SPN_TENANT_ID                                 # Set from existing env variable
+// export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID						 #                 "
+// export CLIENT_ID=$SPN_CLIENT_ID								 #                 "
+// export CLIENT_SECRET=$SPN_CLIENT_SECRET					     #                 "
 // export AZDATA_USERNAME='boor'						 		 # boor
 // export AZDATA_PASSWORD='acntorPRESTO!'                        # acntorPRESTO!
 // export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"  # Append "arc" to existing RG's name
@@ -41,10 +41,10 @@ import (
 // export DELETE_FLAG='false'									 # Starts false - will be overwritten to true during test
 
 func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
-	os.Setenv("TENANT_ID", os.Getenv("spnTenantId"))
-	os.Setenv("SUBSCRIPTION_ID", os.Getenv("subscriptionId"))
-	os.Setenv("CLIENT_ID", os.Getenv("spnClientId"))
-	os.Setenv("CLIENT_SECRET", os.Getenv("spnClientSecret"))
+	os.Setenv("TENANT_ID", os.Getenv("SPN_TENANT_ID"))
+	os.Setenv("SUBSCRIPTION_ID", os.Getenv("SPN_SUBSCRIPTION_ID"))
+	os.Setenv("CLIENT_ID", os.Getenv("SPN_CLIENT_ID"))
+	os.Setenv("CLIENT_SECRET", os.Getenv("SPN_CLIENT_SECRET"))
 	os.Setenv("AZDATA_USERNAME", "boor")
 	os.Setenv("AZDATA_PASSWORD", "acntorPRESTO!")
 

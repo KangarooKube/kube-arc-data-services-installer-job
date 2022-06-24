@@ -30,13 +30,23 @@ import (
 	"github.com/docker/docker/client"
 )
 
+// Globals
+var (
+	// Initiate with root TF directory
+	// Local run - will remain as aksTfModuleDir
+	// CI run - will get overwritten with temp folder from test_structure.CopyTerraformFolderToTemp for the duration of the run
+	testFolder = aksTfModuleDir
+)
+
 // Test run that has skippable stages built in
 func TestAksIntegrationWithStages(t *testing.T) {
 	t.Parallel()
-	testFolder := locateTestFolder(t)
 
-	// Set environment variables for ARM authentication
+	// Set environment variables for ARM and TF authentication
 	setARMVariables(t)
+
+	// Copy the root Terraform module into a temporary directory
+	testFolder = test_structure.CopyTerraformFolderToTemp(t, "../", testFolder)
 
 	defer test_structure.RunTestStage(t, "teardown_aks", func() {
 		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
@@ -44,6 +54,7 @@ func TestAksIntegrationWithStages(t *testing.T) {
 	})
 
 	test_structure.RunTestStage(t, "deploy_aks", func() {
+		// Creates for the first time run, this is NOT idempotent because of uniqueID
 		aksTfOpts := createaksTfOpts(t, testFolder)
 
 		// Save data to disk so that other test stages executed at a later time can read the data back in
@@ -144,8 +155,8 @@ func buildTagPushDockerImage(t *testing.T, aksTfOpts *terraform.Options) {
 
 	// Push image to ACR
 	var authConfig = types.AuthConfig{
-		Username:      os.Getenv("spnClientId"),
-		Password:      os.Getenv("spnClientSecret"),
+		Username:      os.Getenv("SPN_CLIENT_ID"),
+		Password:      os.Getenv("SPN_CLIENT_SECRET"),
 		ServerAddress: fmt.Sprintf("%s.azurecr.io/", acrName),
 	}
 	authConfigBytes, _ := json.Marshal(authConfig)
@@ -189,7 +200,7 @@ func generateTemplateAndManifest(t *testing.T, aksTfOpts *terraform.Options) str
 func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedManifestPath string) {
 
 	// Setup the kubectl config and namespace context - grabbed from Terraform module output
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), jobNamespace)
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), jobNamespace)
 
 	// Clean up
 	defer func() {
@@ -233,7 +244,7 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 // Calls Kubernetes to get post-deployment health checks done
 func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Namespace: "azure-arc" - which is static
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), "azure-arc")
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), "azure-arc")
 
 	// Get Last Connectivity Time for connected cluster
 	jsonPathQuery := "{.items[*]['status.lastConnectivityTime']}"
@@ -246,7 +257,7 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	})
 
 	// Get Data Controller Health Status
-	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), os.Getenv("ARC_DATA_NAMESPACE"))
+	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), os.Getenv("ARC_DATA_NAMESPACE"))
 
 	jsonPathQuery = "{.items[*]['status']}"
 	controllerStatus, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
@@ -343,7 +354,7 @@ func validateDataServicesWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
 // Calls Kubernetes to get post-offboarding health checks done
 func validateArcOffboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), "default")
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), "default")
 	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
 	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
 	t.Run("k8s_ensure_all_microsoft_crd_apigroups_uninstalled", func(t *testing.T) {

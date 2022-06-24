@@ -9,7 +9,6 @@ import (
 	// Terragrunt
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 
 	// Azure
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -20,30 +19,19 @@ import (
 // To avoid wasting lots of time constantly creating and deleting Blob Storages for the tests that need to store state remotely, we created the Blob Storage ahead of time and pull as environment variables.
 // We declare these as constants to avoid any ambiguity in the code - they'll be fed in via env variables in Devcontainer or CI pipeline.
 const (
-	TerraformStateBlobStoreNameForTestEnvVarName      = "TFSTATE_STORAGE_ACCOUNT_NAME"
-	TerraformStateBlobStoreContainerForTestEnvVarName = "TFSTATE_STORAGE_ACCOUNT_CONTAINER_NAME"
-	TerraformStateBlobStoreKeyForTestEnvVarName       = "TFSTATE_STORAGE_ACCOUNT_KEY"
-	aksTfModuleDir                                    = "terraform/aks-rbac" // Relative path from ci root to the AKS terraform module
-	k8sBasePayloadDir                                 = "../../kustomize/base"
-	k8sAksOverlayPayloadDir                           = "../../kustomize/overlays/aks"
-	k8sPayloadTempDir                                 = "../../kustomize/.temp"
-	containerName                                     = "kube-arc-data-services-installer-job"
-	containerVersion                                  = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
-	dockerFilePath                                    = "../../"
-	namePrefix                                        = "arcCIAksTf"
-	deploymentLocation                                = "canadacentral"
-	jobNamespace                                      = "azure-arc-kubernetes-bootstrap"
-	jobName                                           = "azure-arc-kubernetes-bootstrap"
-	arcInstallTimeOutInMins                           = 45
+	aksTfModuleDir          = "terraform/aks-rbac" // Relative path from ci root to the AKS terraform module
+	k8sBasePayloadDir       = "../../kustomize/base"
+	k8sAksOverlayPayloadDir = "../../kustomize/overlays/aks"
+	k8sPayloadTempDir       = "../../kustomize/.temp"
+	containerName           = "kube-arc-data-services-installer-job"
+	containerVersion        = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
+	dockerFilePath          = "../../"
+	namePrefix              = "arcCIAksTf"
+	deploymentLocation      = "canadacentral"
+	jobNamespace            = "azure-arc-kubernetes-bootstrap"
+	jobName                 = "azure-arc-kubernetes-bootstrap"
+	arcInstallTimeOutInMins = 45
 )
-
-// A wrapper around test_structure to get back the Test folder co-ordinates
-// We need this because each of our tests also stores a kubeconfig that is spit out
-// from Terraform. Therefore, each Test Stage needs to know where it can locate it's
-// respective kubeconfig.
-func locateTestFolder(t *testing.T) string {
-	return test_structure.CopyTerraformFolderToTemp(t, "../", aksTfModuleDir)
-}
 
 // Creates Terraform Options for AKS with remote state backend
 //
@@ -75,11 +63,8 @@ func locateTestFolder(t *testing.T) string {
 func createaksTfOpts(t *testing.T, terraformDir string) *terraform.Options {
 	uniqueId := strings.ToLower(random.UniqueId())
 
-	// State backend environment variables
-	stateBlobAccountNameForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreNameForTestEnvVarName)
-	stateBlobAccountContainerForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreContainerForTestEnvVarName)
-	stateBlobAccountKeyForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreKeyForTestEnvVarName)
-	storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), uniqueId)
+	// Ensures env variables are injected in before creating the Options which get stored in the state file
+	setARMVariables(t)
 
 	return &terraform.Options{
 		// Set the path to the Terraform code that will be tested.
@@ -96,66 +81,30 @@ func createaksTfOpts(t *testing.T, terraformDir string) *terraform.Options {
 			},
 		},
 
-		BackendConfig: map[string]interface{}{
-			"storage_account_name": stateBlobAccountNameForTesting,
-			"container_name":       stateBlobAccountContainerForTesting,
-			"access_key":           stateBlobAccountKeyForTesting,
-			"key":                  storageAccountStateKey,
-		},
-
-		// Service Principal creds from Environment Variables
-		EnvVars: setTerraformVariables(t),
-
 		// Colors in Terraform commands - we like colors
 		NoColor: false,
 	}
 }
 
-// Injects environment variables into structured map for Terraform authentication with Azure
-func setTerraformVariables(t *testing.T) map[string]string {
-
-	// Grab from devcontainer environment variables
-	ARM_CLIENT_ID := os.Getenv("spnClientId")
-	ARM_CLIENT_SECRET := os.Getenv("spnClientSecret")
-	ARM_TENANT_ID := os.Getenv("spnTenantId")
-	ARM_SUBSCRIPTION_ID := os.Getenv("subscriptionId")
-
-	// If any of the above variables are empty, return an error
-	if ARM_CLIENT_ID == "" || ARM_CLIENT_SECRET == "" || ARM_TENANT_ID == "" || ARM_SUBSCRIPTION_ID == "" {
-		t.Fatalf("Missing one or more of the following environment variables: spnClientId, spnClientSecret, spnTenantId, subscriptionId")
-	}
-
-	// Creating map for terraform call through Terratest
-	EnvVars := make(map[string]string)
-
-	if ARM_CLIENT_ID != "" {
-		EnvVars["ARM_CLIENT_ID"] = ARM_CLIENT_ID
-		EnvVars["ARM_CLIENT_SECRET"] = ARM_CLIENT_SECRET
-		EnvVars["ARM_TENANT_ID"] = ARM_TENANT_ID
-		EnvVars["ARM_SUBSCRIPTION_ID"] = ARM_SUBSCRIPTION_ID
-	}
-
-	return EnvVars
-}
-
-// Injects environment variables in expected naming for Azure SDK authentication with Azure
+// Injects environment variables in expected naming for Azure and Terraform SDK authentication with Azure
 // https://docs.microsoft.com/en-us/azure/developer/go/azure-sdk-authentication?tabs=bash
+// https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret#configuring-the-service-principal-in-terraform
 func setARMVariables(t *testing.T) {
 
-	// If any of the required variables are empty, return an error
-	if os.Getenv("spnClientId") == "" || os.Getenv("spnClientSecret") == "" || os.Getenv("spnTenantId") == "" || os.Getenv("subscriptionId") == "" {
-		t.Fatalf("Missing one or more of the following environment variables: spnClientId, spnClientSecret, spnTenantId, subscriptionId")
+	// If any of the required secret variables are empty in this environment, return an error
+	if os.Getenv("SPN_CLIENT_ID") == "" || os.Getenv("SPN_CLIENT_SECRET") == "" || os.Getenv("SPN_TENANT_ID") == "" || os.Getenv("SPN_SUBSCRIPTION_ID") == "" {
+		t.Fatalf("Missing one or more of the following environment variables: SPN_CLIENT_ID, SPN_CLIENT_SECRET, SPN_TENANT_ID, SPN_SUBSCRIPTION_ID")
 	}
 
 	// Set environment variables for Azure SDK authentication - both permutations
-	os.Setenv("AZURE_CLIENT_ID", os.Getenv("spnClientId"))
-	os.Setenv("ARM_CLIENT_ID", os.Getenv("spnClientId"))
-	os.Setenv("AZURE_CLIENT_SECRET", os.Getenv("spnClientSecret"))
-	os.Setenv("ARM_CLIENT_SECRET", os.Getenv("spnClientSecret"))
-	os.Setenv("AZURE_TENANT_ID", os.Getenv("spnTenantId"))
-	os.Setenv("ARM_TENANT_ID", os.Getenv("spnTenantId"))
-	os.Setenv("AZURE_SUBSCRIPTION_ID", os.Getenv("subscriptionId"))
-	os.Setenv("ARM_SUBSCRIPTION_ID", os.Getenv("subscriptionId"))
+	os.Setenv("AZURE_CLIENT_ID", os.Getenv("SPN_CLIENT_ID"))
+	os.Setenv("ARM_CLIENT_ID", os.Getenv("SPN_CLIENT_ID"))
+	os.Setenv("AZURE_CLIENT_SECRET", os.Getenv("SPN_CLIENT_SECRET"))
+	os.Setenv("ARM_CLIENT_SECRET", os.Getenv("SPN_CLIENT_SECRET"))
+	os.Setenv("AZURE_TENANT_ID", os.Getenv("SPN_TENANT_ID"))
+	os.Setenv("ARM_TENANT_ID", os.Getenv("SPN_TENANT_ID"))
+	os.Setenv("AZURE_SUBSCRIPTION_ID", os.Getenv("SPN_SUBSCRIPTION_ID"))
+	os.Setenv("ARM_SUBSCRIPTION_ID", os.Getenv("SPN_SUBSCRIPTION_ID"))
 
 }
 

@@ -6,6 +6,7 @@ local/
 
 # VS Code
 *.code-workspace
+.vscode/*.log
 
 # Binaries for programs and plugins
 *.exe

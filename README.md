@@ -32,10 +32,10 @@ Same set works for AKS and OpenShift - kustomize overlay contains the difference
 export resourceGroup='arcjob-rg'                              # Prefix to append to the two RGs below
 export clusterName='arc-k8s'                                  # Can be anything
 # Secret
-export TENANT_ID=$spnTenantId                                 # Passed into Job to authenticate to Azure to create resources
-export SUBSCRIPTION_ID=$subscriptionId
-export CLIENT_ID=$spnClientId
-export CLIENT_SECRET=$spnClientSecret
+export TENANT_ID=$SPN_TENANT_ID                                 # Passed into Job to authenticate to Azure to create resources
+export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID
+export CLIENT_ID=$SPN_CLIENT_ID
+export CLIENT_SECRET=$SPN_CLIENT_SECRET
 export AZDATA_USERNAME='boor'
 export AZDATA_PASSWORD='acntorPRESTO!'
 # ConfigMap
@@ -64,8 +64,8 @@ export DELETE_FLAG='false'
 # ---------------------
 # Cluster-admin kubeconfig to start process
 become_aks_cluster_admin () {
-  az login --service-principal --username $spnClientId --password $spnClientSecret --tenant $spnTenantId
-  az account set --subscription $subscriptionId
+  az login --service-principal --username $SPN_CLIENT_ID --password $SPN_CLIENT_SECRET --tenant $SPN_TENANT_ID
+  az account set --subscription $SPN_SUBSCRIPTION_ID
   az config set extension.use_dynamic_install=yes_without_prompt
   rm $HOME/.kube/config
   az aks get-credentials --resource-group $resourceGroup --name $aksClusterName --admin
