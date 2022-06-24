@@ -49,6 +49,10 @@ github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.1.0 h1:QkAcEIAKbNL4KoFr4Sath
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.1.0/go.mod h1:bhXu1AjYL+wutSL/kpSq6s7733q2Rb0yuot9Zgfqa/0=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.0.0 h1:jp0dGvZ7ZK0mgqnTSClMxa5xuRL7NZgHameVYF6BurY=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.0.0/go.mod h1:eWRD7oawr1Mu1sLCawqVc0CUiF43ia3qQMxLscsKQ9w=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/azurearcdata/armazurearcdata v0.5.0 h1:2gPAcm4y6tHKjv77zgL5u0Kc1o3rCuw952JiS2kqSVg=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/azurearcdata/armazurearcdata v0.5.0/go.mod h1:d6QKb8hrJNefGMOdf7AJlzNpzUwqILR/E2l9aDEhIS0=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/extendedlocation/armextendedlocation v1.0.0 h1:OG8ZdoMOWDlKyCKKkBw7Dod4MNSz75W7l1nFD7WF+rY=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/extendedlocation/armextendedlocation v1.0.0/go.mod h1:2hE7ViPJlB0I6LCip6bAX+3XNg9H8tfGvGHWMMf8pb4=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/hybridkubernetes/armhybridkubernetes v1.0.0 h1:HF7j6hsfWpeFfEvahWIYkKLOsQXqi0FiiM7+8vHGkEA=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/hybridkubernetes/armhybridkubernetes v1.0.0/go.mod h1:z++3/w1natTx+qg5p9PMKCF+jaqhonJ5yvCb/has3+k=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/kubernetesconfiguration/armkubernetesconfiguration v1.0.0 h1:yVz1TGKZ67z+ku7oK+6wRqVInqij4nYzRXUhe5io8Yw=

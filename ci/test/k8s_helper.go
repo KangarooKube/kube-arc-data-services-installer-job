@@ -7,9 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/stretchr/testify/require"
 )
 
@@ -79,4 +82,24 @@ func generateTemplate(t *testing.T, templateFilePath, payloadFilePath string, re
 
 	err = ioutil.WriteFile(payloadFilePath, output, 0666)
 	require.NoError(t, err)
+}
+
+// Returns a list of API Groups owned by Microsoft, identified by the presence of the "microsoft" or "azure" label
+func getAllMicrosoftCrdApiGroups(t *testing.T, options *k8s.KubectlOptions) []string {
+	// Get all microsoft CRDs
+	jsonPathQuery := "{.items[*]['spec.group']}"
+	crdApiGroups, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "crds", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
+	crdApiGroups = regexp.MustCompile(`^"(.*)"$`).ReplaceAllString(crdApiGroups, `$1`) // Remove quotes
+	require.NoError(t, err)
+	crdApiGroupsArray := removeDuplicatesFromArray(t, splitStringIntoArrayBasedOnDelimiter(t, crdApiGroups, " "))
+
+	// Filter array for terms that has "microsoft" or "azure"
+	microsoftApiGroups := []string{}
+	for _, apiGroup := range crdApiGroupsArray {
+		if strings.Contains(apiGroup, "microsoft") || strings.Contains(apiGroup, "azure") {
+			microsoftApiGroups = append(microsoftApiGroups, apiGroup)
+		}
+	}
+
+	return microsoftApiGroups
 }

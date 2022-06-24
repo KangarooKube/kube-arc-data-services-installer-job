@@ -37,8 +37,9 @@ go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 ## Development workflow via `Stages`
 
 Example:
+
 ```bash
-# Blow away old local state
+# Blow away old local state from previous clusters
 MODULE_PATH='/workspaces/kube-arc-data-services-installer-job/ci/terraform/aks-rbac'
 rm -rf ${MODULE_PATH}/.terraform
 rm -rf ${MODULE_PATH}/.test-data
@@ -52,10 +53,6 @@ go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 # 2. Iterate on validation - tweak stages to skip as we go
 SKIP_teardown_aks=true \
 SKIP_deploy_aks=true \
-SKIP_validate_aks=true \
-SKIP_build_and_push_image=true \
-SKIP_onboard_arc=true \
-SKIP_destroy_arc=true \
 go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
 # ...
 

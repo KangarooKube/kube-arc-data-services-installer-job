@@ -11,6 +11,8 @@ import (
 
 	// Azure
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/azurearcdata/armazurearcdata"                       // Data Controller
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/extendedlocation/armextendedlocation"               // Custom Location
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/hybridkubernetes/armhybridkubernetes"               // Connected Cluster
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/kubernetesconfiguration/armkubernetesconfiguration" // Extensions
 )
@@ -104,4 +106,36 @@ func getConnectedClusterExtension(t *testing.T, ctx context.Context, cred azcore
 	require.NoError(t, err)
 
 	return &extensionResponse
+}
+
+// Retreieves Custom Location
+func getCustomLocation(t *testing.T, ctx context.Context, cred azcore.TokenCredential, resourceGroupName, customLocationName string) *armextendedlocation.CustomLocationsClientGetResponse {
+	customLocationClient, err := armextendedlocation.NewCustomLocationsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), cred, nil)
+	require.NoError(t, err)
+
+	customLocationResponse, err := customLocationClient.Get(
+		ctx,
+		resourceGroupName,
+		customLocationName,
+		nil,
+	)
+	require.NoError(t, err)
+
+	return &customLocationResponse
+}
+
+// Retreieves Data Controller
+func getDataController(t *testing.T, ctx context.Context, cred azcore.TokenCredential, resourceGroupName, dataControllerName string) *armazurearcdata.DataControllersClientGetDataControllerResponse {
+	dataControllerClient, err := armazurearcdata.NewDataControllersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), cred, nil)
+	require.NoError(t, err)
+
+	dataControllerResponse, err := dataControllerClient.GetDataController(
+		ctx,
+		resourceGroupName,
+		dataControllerName,
+		nil,
+	)
+	require.NoError(t, err)
+
+	return &dataControllerResponse
 }

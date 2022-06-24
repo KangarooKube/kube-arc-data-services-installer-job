@@ -2,6 +2,7 @@ package test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	// Azure
@@ -90,4 +91,40 @@ func GetRequiredEnvVar(t *testing.T, envVarName string) string {
 	}
 
 	return envVarValue
+}
+
+// Split string based on delimiter
+func splitStringIntoArrayBasedOnDelimiter(t *testing.T, str string, delimiter string) []string {
+
+	// Split the string based on the delimiter
+	splitStr := strings.Split(str, delimiter)
+
+	// If the split string is empty, return an error
+	if len(splitStr) == 0 {
+		t.Fatalf("String '%s' was not split into array based on delimiter '%s'", str, delimiter)
+	}
+
+	return splitStr
+}
+
+// Removes duplicates from the array
+func removeDuplicatesFromArray(t *testing.T, arr []string) []string {
+
+	// Create a map to store the unique values
+	uniqueValues := make(map[string]bool)
+
+	// Iterate over the array and add the values to the map
+	for _, value := range arr {
+		uniqueValues[value] = true
+	}
+
+	// Create a new array to store the unique values
+	uniqueArray := make([]string, 0)
+
+	// Iterate over the map and add the values to the new array
+	for key := range uniqueValues {
+		uniqueArray = append(uniqueArray, key)
+	}
+
+	return uniqueArray
 }

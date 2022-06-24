@@ -41,6 +41,7 @@ const (
 	deploymentLocation      = "canadacentral"
 	jobNamespace            = "azure-arc-kubernetes-bootstrap"
 	jobName                 = "azure-arc-kubernetes-bootstrap"
+	arcInstallTimeOutInMins = 45
 )
 
 // Test run that has skippable stages built in
@@ -96,7 +97,7 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 		validateArcOnboardedWithK8s(t, aksTfOpts)
 		validateConnectedClusterWithARM(t, aksTfOpts)
-		// validateDataServicesWithARM(t, aksTfOpts)
+		validateDataServicesWithARM(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "destroy_arc", func() {
@@ -115,9 +116,12 @@ func TestAksIntegrationWithStages(t *testing.T) {
 		runJobWithK8s(t, aksTfOpts, tempKustomizedManifestPath)
 	})
 
-	// Arc should now be destroyed - perform validations
-	// TODO: New Stage: Arc K8s checks - check CRD's that have "microsoft" or "azure" in the name
+	test_structure.RunTestStage(t, "validate_arc_offboarding", func() {
+		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		setArcJobVariables(t, aksTfOpts) // Used during tests
 
+		validateArcOffboardedWithK8s(t, aksTfOpts)
+	})
 }
 
 // Creates Terraform Options with remote state backend
@@ -247,7 +251,7 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 		// We want to run this before the deletes because if the Job fails, test will try to exit with this function
 		output, err := k8s.RunKubectlAndGetOutputE(t, options, "logs", fmt.Sprintf("job/%s", jobName), "-n", jobNamespace)
 		require.NoError(t, err)
-		t.Logf("Onboaring Job Log: \n %s", output)
+		t.Logf("Job Log: \n %s", output)
 
 		// Delete all job resources
 		k8s.KubectlDelete(t, options, tempKustomizedManifestPath)
@@ -259,9 +263,9 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 	// Apply manifest
 	k8s.KubectlApply(t, options, tempKustomizedManifestPath)
 
-	// Wait 30 mins if job succeeds - sufficient duration for Arc onboarding/offboarding
+	// Wait sufficient amount of time - e.g. 45 mins - to see if job succeeds
 	retriesDuration, _ := time.ParseDuration("60s")
-	k8s.WaitUntilJobSucceed(t, options, jobName, 30, retriesDuration)
+	k8s.WaitUntilJobSucceed(t, options, jobName, arcInstallTimeOutInMins, retriesDuration)
 
 	// Get Job status
 	jobStatus := k8s.IsJobSucceeded(k8s.GetJob(t, options, jobName))
@@ -312,6 +316,15 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	t.Run("k8s_ensure_controller_is_ready", func(t *testing.T) {
 		assert.Equal(t, "ready", strings.ToLower(controllerState), "Controller is in Ready State")
 	})
+
+	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
+	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
+
+	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
+
+	t.Run("k8s_ensure_one_or_more_microsoft_crd_apigroups_installed", func(t *testing.T) {
+		assert.GreaterOrEqual(t, len(microsoftApiGroups), 1, "One or more Microsoft CRD APIGroups are installed in the Cluster")
+	})
 }
 
 // Function calls ARM to validate the Connected Cluster
@@ -356,14 +369,38 @@ func validateConnectedClusterWithARM(t *testing.T, aksRbacOpts *terraform.Option
 }
 
 // // Function calls ARM to validate Data Services
-// func validateDataServicesWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
-// 	// Authenticate to Azure and initiate context
-// 	cred := getAzureCred(t)
-// 	ctx := context.Background()
+func validateDataServicesWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
+	// Authenticate to Azure and initiate context
+	cred := getAzureCred(t)
+	ctx := context.Background()
 
-// 	// This is defined in our module
-// 	expectedDataServiceRg := os.Getenv("ARC_DATA_RESOURCE_GROUP")
-// 	expectedCustomLocationName := os.Getenv("ARC_DATA_NAMESPACE")
-// 	expectedDataControllerName := os.Getenv("ARC_DATA_CONTROLLER")
-// TO BE CONTINUED
-// }
+	// This is defined in our module
+	expectedDataServiceRg := os.Getenv("ARC_DATA_RESOURCE_GROUP")
+	expectedCustomLocationName := os.Getenv("ARC_DATA_NAMESPACE")
+	expectedDataControllerName := os.Getenv("ARC_DATA_CONTROLLER")
+
+	// Get Custom Location
+	customLocationProperty := getCustomLocation(t, ctx, cred, expectedDataServiceRg, expectedCustomLocationName)
+
+	t.Run("arm_ensure_custom_location_namespace_matches_kubernetes", func(t *testing.T) {
+		assert.Equal(t, os.Getenv("ARC_DATA_NAMESPACE"), *customLocationProperty.CustomLocation.Properties.Namespace, "Custom Location is connected to Data Services Kubernetes Namespace")
+	})
+
+	// Get Data Controller
+	dataControllerProperty := getDataController(t, ctx, cred, expectedDataServiceRg, expectedDataControllerName)
+
+	t.Run("arm_ensure_data_controller_deployment_succeeded", func(t *testing.T) {
+		assert.Equal(t, "Succeeded", *dataControllerProperty.DataControllerResource.Properties.ProvisioningState, "Controller ARM Deployment Succeeded")
+	})
+}
+
+// Calls Kubernetes to get post-offboarding health checks done
+func validateArcOffboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
+	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), "default")
+	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
+	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
+	t.Run("k8s_ensure_all_microsoft_crd_apigroups_uninstalled", func(t *testing.T) {
+		assert.LessOrEqual(t, len(microsoftApiGroups), 0, "All Microsoft CRD APIGroups are uninstalled from the Cluster")
+	})
+}
