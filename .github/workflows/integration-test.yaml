@@ -1,28 +1,19 @@
 name: Integration Tests
 
 on:
-  pull_request:
-    branches:
-      - 'main'
-
-  push:
-    # Clean this up after
-    branches:
-      - '*'
-
   workflow_dispatch:
     inputs:
-      log_Level:
-        description: 'Log level'
+      name:
+        description: 'Person to greet'
+        default: 'World'
         required: true
-        default: 'verbose'    # We can set last working config here
 
 env:
-  INPUT_LOG_LEVEL: ${{ github.event.inputs.log_Level }}
+  PERSON_NAME: ${{ github.event.inputs.name }}
 
 jobs:
-  job1:
+  greet:
     runs-on: ubuntu-latest
     steps:
-      - name: Print input
-        run: echo "The log level is $INPUT_LOG_LEVEL"
+    - name: Send greeting
+      run: echo "Hello ${{ env.PERSON_NAME }}"
