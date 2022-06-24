@@ -49,3 +49,11 @@ jobs:
         with:
           terraform_version: 1.2.3
           terraform_wrapper: false
+
+      - uses: docker-practice/actions-setup-docker@master
+      - name: Validate Docker install 
+        run: docker version
+
+      - uses: azure/setup-kubectl@v2.0
+      - name: Validate Kubectl install 
+        run: kubectl version
