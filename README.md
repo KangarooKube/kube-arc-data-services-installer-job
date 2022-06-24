@@ -3,65 +3,36 @@ Kubernetes job for installing Azure ARC and Azure ARC Data Services on a Kuberne
 
 | Tested on AKS and OpenShift 4.10.16
 
-## AKS Environment spinup
-```bash
-# ---------------------
-# ENVIRONMENT VARIABLES
-# For Terraform
-# ---------------------
-export TF_VAR_SPN_CLIENT_ID=$spnClientId
-export TF_VAR_SPN_CLIENT_SECRET=$spnClientSecret
-export TF_VAR_SPN_TENANT_ID=$spnTenantId
-export TF_VAR_SPN_SUBSCRIPTION_ID=$subscriptionId
-export TF_VAR_resource_prefix='arccicd'
-export TF_VAR_tags='{ Source = "terraform", Owner = "Raki", Project = "CICD Testing for Arc" }'
+## Environment spinup
 
-cd /workspaces/kube-arc-data-services-installer-job/test/terraform
+You will need:
+* A Kubernetes Cluster
+* A Container Registry to build and push images to
 
-# ---------------------
-# DEPLOY TERRAFORM
-# ---------------------
-terraform init
-terraform plan
-terraform apply -auto-approve
-```
-
-> OpenShift Env setup TBD.
-
-## Build and push image to ACR
-
-```bash
-# ---------------------
-# EXTRACT OUTPUTS
-# ---------------------
-export resourceGroup=$(terraform output --raw resource_group_name)
-export aksClusterName=$(terraform output --raw aks_name)
-export acrName=$(terraform output --raw acr_name)
-
-export containerVersion='0.1.0' # To increment via CI pipeline
-export containerName='kube-arc-data-services-installer-job'
-
-cd /workspaces/kube-arc-data-services-installer-job
-
-# Remove Windows Carriage Returns
-dos2unix /workspaces/kube-arc-data-services-installer-job/src/scripts/install-arc-data-services.sh
-
-# Build & Push
-az acr login --name $acrName
-docker build -t $acrName.azurecr.io/$containerName:$containerVersion .
-docker push $acrName.azurecr.io/$containerName:$containerVersion
-```
+Follow the steps [here](ci/terraform/aks-rbac/README.md) to deploy an environment using Terraform, the same environment our CI runs use.
 
 ## Deploy manifests
+
+### Update image tag from env variable via `envsubst`
+
+```bash
+export IMAGE_REGISTRY="${acrName}.azurecr.io"
+export IMAGE_TAG="${containerVersion}"
+export BASE_PATH="/workspaces/kube-arc-data-services-installer-job/kustomize/base"
+
+envsubst \
+    < $BASE_PATH/kustomization.template.yaml \
+    > $BASE_PATH/kustomization.yaml
+```
 
 ### Variables for `ConfigMap` and `Secret`
 
 Same set works for AKS and OpenShift - kustomize overlay contains the differences:
 ```bash
-export resourceGroup='arcjob-rg'
-export clusterName='arc-k8s'
+export resourceGroup='arcjob-rg'                              # Prefix to append to the two RGs below
+export clusterName='arc-k8s'                                  # Can be anything
 # Secret
-export TENANT_ID=$spnTenantId
+export TENANT_ID=$spnTenantId                                 # Passed into Job to authenticate to Azure to create resources
 export SUBSCRIPTION_ID=$subscriptionId
 export CLIENT_ID=$spnClientId
 export CLIENT_SECRET=$spnClientSecret
@@ -69,16 +40,16 @@ export AZDATA_USERNAME='boor'
 export AZDATA_PASSWORD='acntorPRESTO!'
 # ConfigMap
 export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"
-export CONNECTED_CLUSTER_LOCATION="eastasia"
+export CONNECTED_CLUSTER_LOCATION="eastasia"                  # Where Arc Connected Cluster RG will be created
 export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"
-export ARC_DATA_LOCATION="eastasia"
+export ARC_DATA_LOCATION="eastasia"                           # Where Arc Data RG will be created - can be different from Connected Cluster
 export CONNECTED_CLUSTER=$clusterName
 export ARC_DATA_EXT="arc-data-bootstrapper"
 export ARC_DATA_EXT_AUTO_UPGRADE="false"
-export ARC_DATA_EXT_VERSION="1.2.19831003"
+export ARC_DATA_EXT_VERSION="1.2.19831003"                    # Can update per release to test
 export ARC_DATA_NAMESPACE="azure-arc-data"
 export ARC_DATA_CONTROLLER="azure-arc-data-controller"
-export ARC_DATA_CONTROLLER_LOCATION="southeastasia"
+export ARC_DATA_CONTROLLER_LOCATION="southeastasia"           # Based on RP availability
 # false = onboard Arc
 # delete = destroy Arc
 # Both are idempotent

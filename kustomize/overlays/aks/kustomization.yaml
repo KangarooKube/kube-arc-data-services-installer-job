@@ -7,4 +7,3 @@ configMapGenerator:
   namespace: azure-arc-kubernetes-bootstrap
   files:
     - configs/control.json
-    
