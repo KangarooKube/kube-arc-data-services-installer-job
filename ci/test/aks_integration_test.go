@@ -1,3 +1,5 @@
+//go:build integration && aks
+
 package test
 
 import (
@@ -16,7 +18,6 @@ import (
 	// Terragrunt
 	"github.com/gruntwork-io/terratest/modules/azure"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 
@@ -29,54 +30,40 @@ import (
 	"github.com/docker/docker/client"
 )
 
-const (
-	aksTfModuleDir          = "../terraform/aks-rbac" // Relative path to the AKS terraform module
-	k8sBasePayloadDir       = "../../kustomize/base"
-	k8sAksOverlayPayloadDir = "../../kustomize/overlays/aks"
-	k8sPayloadTempDir       = "../../kustomize/.temp"
-	containerName           = "kube-arc-data-services-installer-job"
-	containerVersion        = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
-	dockerFilePath          = "../../"
-	namePrefix              = "arcCIAksTf"
-	deploymentLocation      = "canadacentral"
-	jobNamespace            = "azure-arc-kubernetes-bootstrap"
-	jobName                 = "azure-arc-kubernetes-bootstrap"
-	arcInstallTimeOutInMins = 45
-)
-
 // Test run that has skippable stages built in
 func TestAksIntegrationWithStages(t *testing.T) {
 	t.Parallel()
+	testFolder := locateTestFolder(t)
 
 	// Set environment variables for ARM authentication
 	setARMVariables(t)
 
 	defer test_structure.RunTestStage(t, "teardown_aks", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		defer terraform.Destroy(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "deploy_aks", func() {
-		aksTfOpts := createaksTfOpts(t, aksTfModuleDir)
+		aksTfOpts := createaksTfOpts(t, testFolder)
 
 		// Save data to disk so that other test stages executed at a later time can read the data back in
-		test_structure.SaveTerraformOptions(t, aksTfModuleDir, aksTfOpts)
+		test_structure.SaveTerraformOptions(t, testFolder, aksTfOpts)
 
 		terraform.InitAndApply(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "validate_aks", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		validateNodeCountWithARM(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "build_and_push_image", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		buildTagPushDockerImage(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "onboard_arc", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 
 		// Environment variables will be converted into ConfigMap and Secret by Kustomize
 		setArcJobVariables(t, aksTfOpts)
@@ -92,7 +79,7 @@ func TestAksIntegrationWithStages(t *testing.T) {
 	})
 
 	test_structure.RunTestStage(t, "validate_arc_onboarding", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		setArcJobVariables(t, aksTfOpts) // Used during tests
 
 		validateArcOnboardedWithK8s(t, aksTfOpts)
@@ -101,7 +88,7 @@ func TestAksIntegrationWithStages(t *testing.T) {
 	})
 
 	test_structure.RunTestStage(t, "destroy_arc", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 
 		// Environment variables will be converted into ConfigMap and Secret by Kustomize
 		setArcJobVariables(t, aksTfOpts)
@@ -117,52 +104,11 @@ func TestAksIntegrationWithStages(t *testing.T) {
 	})
 
 	test_structure.RunTestStage(t, "validate_arc_offboarding", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		setArcJobVariables(t, aksTfOpts) // Used during tests
 
 		validateArcOffboardedWithK8s(t, aksTfOpts)
 	})
-}
-
-// Creates Terraform Options with remote state backend
-func createaksTfOpts(t *testing.T, terraformDir string) *terraform.Options {
-	uniqueId := strings.ToLower(random.UniqueId())
-
-	// State backend environment variables
-	stateBlobAccountNameForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreNameForTestEnvVarName)
-	stateBlobAccountContainerForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreContainerForTestEnvVarName)
-	stateBlobAccountKeyForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreKeyForTestEnvVarName)
-
-	storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), uniqueId)
-
-	return &terraform.Options{
-		// Set the path to the Terraform code that will be tested.
-		TerraformDir: terraformDir,
-
-		// Variables to pass to our Terraform code using -var options.
-		Vars: map[string]interface{}{
-			"resource_prefix": fmt.Sprintf("%s%s", namePrefix, uniqueId),
-			"location":        deploymentLocation,
-			"tags": map[string]string{
-				"Source":  "terratest",
-				"Owner":   "Raki Rahman",
-				"Project": "Terraform CI testing for Arc Install",
-			},
-		},
-
-		BackendConfig: map[string]interface{}{
-			"storage_account_name": stateBlobAccountNameForTesting,
-			"container_name":       stateBlobAccountContainerForTesting,
-			"access_key":           stateBlobAccountKeyForTesting,
-			"key":                  storageAccountStateKey,
-		},
-
-		// Service Principal creds from Environment Variables
-		EnvVars: setTerraformVariables(t),
-
-		// Colors in Terraform commands - we like colors
-		NoColor: false,
-	}
 }
 
 // Validate that the Node Count is g.t.e 3 for Arc Data deployment
@@ -243,7 +189,7 @@ func generateTemplateAndManifest(t *testing.T, aksTfOpts *terraform.Options) str
 func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedManifestPath string) {
 
 	// Setup the kubectl config and namespace context - grabbed from Terraform module output
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), jobNamespace)
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), jobNamespace)
 
 	// Clean up
 	defer func() {
@@ -287,7 +233,7 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 // Calls Kubernetes to get post-deployment health checks done
 func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Namespace: "azure-arc" - which is static
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), "azure-arc")
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), "azure-arc")
 
 	// Get Last Connectivity Time for connected cluster
 	jsonPathQuery := "{.items[*]['status.lastConnectivityTime']}"
@@ -300,7 +246,7 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	})
 
 	// Get Data Controller Health Status
-	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), os.Getenv("ARC_DATA_NAMESPACE"))
+	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), os.Getenv("ARC_DATA_NAMESPACE"))
 
 	jsonPathQuery = "{.items[*]['status']}"
 	controllerStatus, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
@@ -397,7 +343,7 @@ func validateDataServicesWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
 // Calls Kubernetes to get post-offboarding health checks done
 func validateArcOffboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), "default")
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", locateTestFolder(t)), "default")
 	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
 	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
 	t.Run("k8s_ensure_all_microsoft_crd_apigroups_uninstalled", func(t *testing.T) {

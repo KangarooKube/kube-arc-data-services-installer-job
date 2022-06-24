@@ -46,7 +46,8 @@
 		"github.copilot", // Copilot integration
 		"spikespaz.vscode-smoothtype", // smooth cursor animation
 		"pkief.material-icon-theme", // Better file extension icons
-		"yzhang.markdown-all-in-one" // Markdown visualizer
+		"yzhang.markdown-all-in-one", // Markdown visualizer
+		"ms-vscode.makefile-tools" // Makefile
 		// "mohsen1.prettify-json", // Prettify JSON data
 		// "zxh404.vscode-proto3", // Supports Proto syntax
 		// "jrebocho.vscode-random", // Generates random values

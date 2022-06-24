@@ -1,13 +1,20 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
+	// Terragrunt
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
+
 	// Azure
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	// Testing
 )
 
 // To avoid wasting lots of time constantly creating and deleting Blob Storages for the tests that need to store state remotely, we created the Blob Storage ahead of time and pull as environment variables.
@@ -16,7 +23,93 @@ const (
 	TerraformStateBlobStoreNameForTestEnvVarName      = "TFSTATE_STORAGE_ACCOUNT_NAME"
 	TerraformStateBlobStoreContainerForTestEnvVarName = "TFSTATE_STORAGE_ACCOUNT_CONTAINER_NAME"
 	TerraformStateBlobStoreKeyForTestEnvVarName       = "TFSTATE_STORAGE_ACCOUNT_KEY"
+	aksTfModuleDir                                    = "terraform/aks-rbac" // Relative path from ci root to the AKS terraform module
+	k8sBasePayloadDir                                 = "../../kustomize/base"
+	k8sAksOverlayPayloadDir                           = "../../kustomize/overlays/aks"
+	k8sPayloadTempDir                                 = "../../kustomize/.temp"
+	containerName                                     = "kube-arc-data-services-installer-job"
+	containerVersion                                  = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
+	dockerFilePath                                    = "../../"
+	namePrefix                                        = "arcCIAksTf"
+	deploymentLocation                                = "canadacentral"
+	jobNamespace                                      = "azure-arc-kubernetes-bootstrap"
+	jobName                                           = "azure-arc-kubernetes-bootstrap"
+	arcInstallTimeOutInMins                           = 45
 )
+
+// A wrapper around test_structure to get back the Test folder co-ordinates
+// We need this because each of our tests also stores a kubeconfig that is spit out
+// from Terraform. Therefore, each Test Stage needs to know where it can locate it's
+// respective kubeconfig.
+func locateTestFolder(t *testing.T) string {
+	return test_structure.CopyTerraformFolderToTemp(t, "../", aksTfModuleDir)
+}
+
+// Creates Terraform Options for AKS with remote state backend
+//
+// There's two design options:
+//
+// 1. Include hostname in ID - which would allow ust to run the command below in an idempotent fashion
+//
+//	Pros:
+//		- Can run Unit test over and over without cleaning remote state file
+//  Cons:
+//		- Can only run one integration test run on a given machine at a time since State file will conflict
+// 		- Resouce names will include uniqueID anyway so Terraform will try to recreate resources - meaning this idempotent approach is useless for Integration Tests to start
+//
+// 	Sample implementation
+// 		hostname, err := os.Hostname()
+//		require.NoError(t, err)
+//		storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), hostname)
+//
+// 2. Include unique ID - which means the command below can only be run once per machine without state file conflict
+//
+//  Pros:
+// 		- Can run multiple Integration tests at once on a given machine
+//      - For local dev, terratest include stage skips which would circumvent this anyway
+//		- Unit tests can just run over and over and generate unique state file, who cares, there's no ARM resources
+//  Cons:
+//		- Each run of the Unit test needs to clean up the remote state file
+//
+// Implemented Option 2 - as there are way more benefits - as long as we Skip the redeploy stage locally we're set
+func createaksTfOpts(t *testing.T, terraformDir string) *terraform.Options {
+	uniqueId := strings.ToLower(random.UniqueId())
+
+	// State backend environment variables
+	stateBlobAccountNameForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreNameForTestEnvVarName)
+	stateBlobAccountContainerForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreContainerForTestEnvVarName)
+	stateBlobAccountKeyForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreKeyForTestEnvVarName)
+	storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), uniqueId)
+
+	return &terraform.Options{
+		// Set the path to the Terraform code that will be tested.
+		TerraformDir: terraformDir,
+
+		// Variables to pass to our Terraform code using -var options.
+		Vars: map[string]interface{}{
+			"resource_prefix": fmt.Sprintf("%s%s", namePrefix, uniqueId),
+			"location":        deploymentLocation,
+			"tags": map[string]string{
+				"Source":  "terratest",
+				"Owner":   "Raki Rahman",
+				"Project": "Terraform CI testing for Arc Install",
+			},
+		},
+
+		BackendConfig: map[string]interface{}{
+			"storage_account_name": stateBlobAccountNameForTesting,
+			"container_name":       stateBlobAccountContainerForTesting,
+			"access_key":           stateBlobAccountKeyForTesting,
+			"key":                  storageAccountStateKey,
+		},
+
+		// Service Principal creds from Environment Variables
+		EnvVars: setTerraformVariables(t),
+
+		// Colors in Terraform commands - we like colors
+		NoColor: false,
+	}
+}
 
 // Injects environment variables into structured map for Terraform authentication with Azure
 func setTerraformVariables(t *testing.T) map[string]string {
