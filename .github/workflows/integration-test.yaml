@@ -40,16 +40,3 @@ jobs:
       - uses: actions/setup-go@v1
         with:
           go-version: 1.18
-
-      - uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: 1.2.3
-          terraform_wrapper: false
-
-      - name: Install Docker
-        uses: docker-practice/actions-setup-docker@master
-        run: docker version
-
-      - uses: azure/setup-kubectl@v2.0
-        id: install-kubectl
-        run: kubectl version
