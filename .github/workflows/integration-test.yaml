@@ -56,4 +56,12 @@ jobs:
 
       - uses: azure/setup-kubectl@v2.0
       - name: Validate Kubectl install
-        run: kubectl version
+        run: kubectl version --client
+
+      - name: Download Go modules
+        working-directory: ci/test
+        run: go mod download
+
+      - name: Run Integration tests
+        working-directory: ci/test
+        run: make integration-test
