@@ -112,5 +112,5 @@ jobs:
         uses: andymckay/append-gist-action@1fbfbbce708a39bd45846f0955ed5521f2099c6d
         with:
           token: ${{ secrets.GIST_TOKEN }}
-          gistURL: https://gist.githubusercontent.com/mdrakiburrahman/f0e5b6dc2db6bf7b1025b52f6af152e4
+          gistURL: https://gist.githubusercontent.com/mdrakiburrahman/187e8eefa854cf5469f7ceecc76b8c86
           file: integration-test-badge.svg
