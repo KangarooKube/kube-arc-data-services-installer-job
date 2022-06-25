@@ -22,10 +22,10 @@ Pipe in Service Principal Creds from environment variables:
 
 ```bash
 # Terraform Provider
-export ARM_TENANT_ID=$spnTenantId
-export ARM_CLIENT_ID=$spnClientId
-export ARM_CLIENT_SECRET=$spnClientSecret
-export ARM_SUBSCRIPTION_ID=$subscriptionId
+export ARM_TENANT_ID=$SPN_TENANT_ID
+export ARM_CLIENT_ID=$SPN_CLIENT_ID
+export ARM_CLIENT_SECRET=$SPN_CLIENT_SECRET
+export ARM_SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID
 
 # Golang Azure SDK
 export AZURE_TENANT_ID=$ARM_TENANT_ID
@@ -84,7 +84,7 @@ dos2unix /workspaces/kube-arc-data-services-installer-job/src/scripts/install-ar
 
 # Build & Push
 cd /workspaces/kube-arc-data-services-installer-job
-docker login $acrName.azurecr.io -u $spnClientId -p $spnClientSecret
+docker login $acrName.azurecr.io -u $SPN_CLIENT_ID -p $SPN_CLIENT_SECRET
 docker build -t $acrName.azurecr.io/$containerName:$containerVersion .
 docker push $acrName.azurecr.io/$containerName:$containerVersion
 ```

@@ -21,17 +21,22 @@ go mod init github.com/kangarookube/kube-arc-data-services-installer-job
 go mod tidy
 ```
 
-Run all the test modules:
+Run unit tests - basically `terraform plan`:
 
 ```bash
-go test -v -timeout 90m
+make unit-test
 ```
 
-Run specific modules and all test cases within it:
+Run integration tests - which is End-to-end:
 
 ```bash
-# Deploy AKS Cluster with RBAC enabled, verbose logs
-go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
+make integration-test
+```
+
+Run both:
+
+```bash
+make test
 ```
 
 ## Development workflow via `Stages`
@@ -44,19 +49,24 @@ MODULE_PATH='/workspaces/kube-arc-data-services-installer-job/ci/terraform/aks-r
 rm -rf ${MODULE_PATH}/.terraform
 rm -rf ${MODULE_PATH}/.test-data
 rm -rf ${MODULE_PATH}/.terraform.lock.hcl
+rm -rf ${MODULE_PATH}/terraform.tfstate
+rm -rf ${MODULE_PATH}/terraform.tfstate.backup
 
-# 1. Deploy one-time
+# 1. Deploy fully one-time, skip destruction
 SKIP_teardown_aks=true \
-go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
+go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
 # ...
 
 # 2. Iterate on validation - tweak stages to skip as we go
 SKIP_teardown_aks=true \
 SKIP_deploy_aks=true \
-go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
+go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
 # ...
 
 # 3. Destroy when done development
-SKIP_deploy_aksTf=true \
-go test -v -timeout 300m -run 'TestAksIntegrationWithStages'
+SKIP_deploy_aks=true \
+go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
 ```
+
+Tips:
+* After the first time deploy, always include `SKIP_deploy_aks=true`, because otherwise Terraform will try to deploy a whole new state file and whole new resources with a uniqueID, and that will mess up your Terratest local folder. If you do this, workaround is to go inside the Terratest local folder and replace the UniqueID as it used to be (get this from Blob Storage).

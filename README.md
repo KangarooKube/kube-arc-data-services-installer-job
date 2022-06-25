@@ -1,4 +1,7 @@
 # kube-arc-data-services-installer-job
+[![Unit Test](https://gist.github.com/mdrakiburrahman/3f7efaed392e80ea103bb77441e0aa4a/raw/unit-test-badge.svg)](https://github.com/KangarooKube/kube-arc-data-services-installer-job/actions/workflows/unit-test.yaml)
+[![Integration Test](https://gist.github.com/mdrakiburrahman/187e8eefa854cf5469f7ceecc76b8c86/raw/integration-test-badge.svg)](https://github.com/KangarooKube/kube-arc-data-services-installer-job/actions/workflows/integration-test.yaml)
+
 Kubernetes job for installing Azure ARC and Azure ARC Data Services on a Kubernetes cluster.
 
 | Tested on AKS and OpenShift 4.10.16
@@ -32,10 +35,10 @@ Same set works for AKS and OpenShift - kustomize overlay contains the difference
 export resourceGroup='arcjob-rg'                              # Prefix to append to the two RGs below
 export clusterName='arc-k8s'                                  # Can be anything
 # Secret
-export TENANT_ID=$spnTenantId                                 # Passed into Job to authenticate to Azure to create resources
-export SUBSCRIPTION_ID=$subscriptionId
-export CLIENT_ID=$spnClientId
-export CLIENT_SECRET=$spnClientSecret
+export TENANT_ID=$SPN_TENANT_ID                               # Passed into Job to authenticate to Azure to create resources
+export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID
+export CLIENT_ID=$SPN_CLIENT_ID
+export CLIENT_SECRET=$SPN_CLIENT_SECRET
 export AZDATA_USERNAME='boor'
 export AZDATA_PASSWORD='acntorPRESTO!'
 # ConfigMap
@@ -64,8 +67,8 @@ export DELETE_FLAG='false'
 # ---------------------
 # Cluster-admin kubeconfig to start process
 become_aks_cluster_admin () {
-  az login --service-principal --username $spnClientId --password $spnClientSecret --tenant $spnTenantId
-  az account set --subscription $subscriptionId
+  az login --service-principal --username $SPN_CLIENT_ID --password $SPN_CLIENT_SECRET --tenant $SPN_TENANT_ID
+  az account set --subscription $SPN_SUBSCRIPTION_ID
   az config set extension.use_dynamic_install=yes_without_prompt
   rm $HOME/.kube/config
   az aks get-credentials --resource-group $resourceGroup --name $aksClusterName --admin
@@ -95,12 +98,6 @@ become_ocp_cluster_admin () {
   export OCP_KUBECONFIG=/workspaces/kube-arc-data-services-installer-job/.devcontainer/kubeconfig
   rm $HOME/.kube/config
   cp $OCP_KUBECONFIG $HOME/.kube/config
-
-  # DNS hack specific to my environment
-  cat << EOF > /etc/resolv.conf
-# DNS requests are forwarded to the host. DHCP DNS options are ignored.
-nameserver 10.216.175.4                 # OCPLab-DC.fg.contoso.com
-EOF
 }
 
 become_ocp_cluster_admin

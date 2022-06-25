@@ -1,3 +1,5 @@
+//go:build integration && aks
+
 package test
 
 import (
@@ -16,7 +18,7 @@ import (
 	// Terragrunt
 	"github.com/gruntwork-io/terratest/modules/azure"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 
@@ -29,70 +31,67 @@ import (
 	"github.com/docker/docker/client"
 )
 
-const (
-	aksTfModuleDir          = "../terraform/aks-rbac" // Relative path to the AKS terraform module
-	k8sBasePayloadDir       = "../../kustomize/base"
-	k8sAksOverlayPayloadDir = "../../kustomize/overlays/aks"
-	k8sPayloadTempDir       = "../../kustomize/.temp"
-	containerName           = "kube-arc-data-services-installer-job"
-	containerVersion        = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
-	dockerFilePath          = "../../"
-	namePrefix              = "arcCIAksTf"
-	deploymentLocation      = "canadacentral"
-	jobNamespace            = "azure-arc-kubernetes-bootstrap"
-	jobName                 = "azure-arc-kubernetes-bootstrap"
-	arcInstallTimeOutInMins = 45
+// Globals
+var (
+	// Initiate with root TF directory
+	// Local run - will remain as aksTfModuleDir
+	// CI run - will get overwritten with temp folder from test_structure.CopyTerraformFolderToTemp for the duration of the run
+	testFolder = aksTfModuleDir
 )
 
 // Test run that has skippable stages built in
 func TestAksIntegrationWithStages(t *testing.T) {
 	t.Parallel()
 
-	// Set environment variables for ARM authentication
+	// Set environment variables for ARM and TF authentication
 	setARMVariables(t)
 
+	// Copy the root Terraform module into a temporary directory
+	testFolder = test_structure.CopyTerraformFolderToTemp(t, "../", testFolder)
+
 	defer test_structure.RunTestStage(t, "teardown_aks", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		defer terraform.Destroy(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "deploy_aks", func() {
-		aksTfOpts := createaksTfOpts(t, aksTfModuleDir)
+		// Creates for the first time run, this is NOT idempotent because of uniqueID
+		aksTfOpts := createaksTfOpts(t, testFolder)
 
 		// Save data to disk so that other test stages executed at a later time can read the data back in
-		test_structure.SaveTerraformOptions(t, aksTfModuleDir, aksTfOpts)
+		test_structure.SaveTerraformOptions(t, testFolder, aksTfOpts)
 
 		terraform.InitAndApply(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "validate_aks", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		validateNodeCountWithARM(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "build_and_push_image", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		buildTagPushDockerImage(t, aksTfOpts)
 	})
 
 	test_structure.RunTestStage(t, "onboard_arc", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 
 		// Environment variables will be converted into ConfigMap and Secret by Kustomize
 		setArcJobVariables(t, aksTfOpts)
 
 		// Run job in Onboard mode
 		os.Setenv("DELETE_FLAG", "false")
-		t.Logf("Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
+		logger.Logf(t, "Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
 		tempKustomizedManifestPath := generateTemplateAndManifest(t, aksTfOpts)
-		t.Log("Deployable manifests in temp folder here:", tempKustomizedManifestPath)
+		logger.Log(t, "Deployable manifests in temp folder here:", tempKustomizedManifestPath)
 
 		// Apply Kustomize Payload and check job health - deletes the job and the temporary manifest folder
 		runJobWithK8s(t, aksTfOpts, tempKustomizedManifestPath)
 	})
 
 	test_structure.RunTestStage(t, "validate_arc_onboarding", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		setArcJobVariables(t, aksTfOpts) // Used during tests
 
 		validateArcOnboardedWithK8s(t, aksTfOpts)
@@ -101,68 +100,27 @@ func TestAksIntegrationWithStages(t *testing.T) {
 	})
 
 	test_structure.RunTestStage(t, "destroy_arc", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 
 		// Environment variables will be converted into ConfigMap and Secret by Kustomize
 		setArcJobVariables(t, aksTfOpts)
 
 		// Run job in Destroy mode
 		os.Setenv("DELETE_FLAG", "true")
-		t.Logf("Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
+		logger.Logf(t, "Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
 		tempKustomizedManifestPath := generateTemplateAndManifest(t, aksTfOpts)
-		t.Log("Deployable manifests in temp folder here:", tempKustomizedManifestPath)
+		logger.Log(t, "Deployable manifests in temp folder here:", tempKustomizedManifestPath)
 
 		// Apply Kustomize Payload and check job health - deletes the job and the temporary manifest folder
 		runJobWithK8s(t, aksTfOpts, tempKustomizedManifestPath)
 	})
 
 	test_structure.RunTestStage(t, "validate_arc_offboarding", func() {
-		aksTfOpts := test_structure.LoadTerraformOptions(t, aksTfModuleDir)
+		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
 		setArcJobVariables(t, aksTfOpts) // Used during tests
 
 		validateArcOffboardedWithK8s(t, aksTfOpts)
 	})
-}
-
-// Creates Terraform Options with remote state backend
-func createaksTfOpts(t *testing.T, terraformDir string) *terraform.Options {
-	uniqueId := strings.ToLower(random.UniqueId())
-
-	// State backend environment variables
-	stateBlobAccountNameForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreNameForTestEnvVarName)
-	stateBlobAccountContainerForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreContainerForTestEnvVarName)
-	stateBlobAccountKeyForTesting := GetRequiredEnvVar(t, TerraformStateBlobStoreKeyForTestEnvVarName)
-
-	storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), uniqueId)
-
-	return &terraform.Options{
-		// Set the path to the Terraform code that will be tested.
-		TerraformDir: terraformDir,
-
-		// Variables to pass to our Terraform code using -var options.
-		Vars: map[string]interface{}{
-			"resource_prefix": fmt.Sprintf("%s%s", namePrefix, uniqueId),
-			"location":        deploymentLocation,
-			"tags": map[string]string{
-				"Source":  "terratest",
-				"Owner":   "Raki Rahman",
-				"Project": "Terraform CI testing for Arc Install",
-			},
-		},
-
-		BackendConfig: map[string]interface{}{
-			"storage_account_name": stateBlobAccountNameForTesting,
-			"container_name":       stateBlobAccountContainerForTesting,
-			"access_key":           stateBlobAccountKeyForTesting,
-			"key":                  storageAccountStateKey,
-		},
-
-		// Service Principal creds from Environment Variables
-		EnvVars: setTerraformVariables(t),
-
-		// Colors in Terraform commands - we like colors
-		NoColor: false,
-	}
 }
 
 // Validate that the Node Count is g.t.e 3 for Arc Data deployment
@@ -177,7 +135,7 @@ func validateNodeCountWithARM(t *testing.T, aksTfOpts *terraform.Options) {
 	cluster, err := azure.GetManagedClusterE(t, expectedResourceGroupName, expectedClusterName, "")
 	require.NoError(t, err)
 	actualCount := *(*cluster.ManagedClusterProperties.AgentPoolProfiles)[0].Count
-	t.Logf("Found cluster with %d nodes", actualCount)
+	logger.Logf(t, "Found cluster with %d nodes", actualCount)
 
 	t.Run("aks_node_count_greater_than_equals_three", func(t *testing.T) {
 		assert.GreaterOrEqual(t, int32(actualCount), int32(0), "AKS Node Count >= 3")
@@ -198,8 +156,8 @@ func buildTagPushDockerImage(t *testing.T, aksTfOpts *terraform.Options) {
 
 	// Push image to ACR
 	var authConfig = types.AuthConfig{
-		Username:      os.Getenv("spnClientId"),
-		Password:      os.Getenv("spnClientSecret"),
+		Username:      os.Getenv("SPN_CLIENT_ID"),
+		Password:      os.Getenv("SPN_CLIENT_SECRET"),
 		ServerAddress: fmt.Sprintf("%s.azurecr.io/", acrName),
 	}
 	authConfigBytes, _ := json.Marshal(authConfig)
@@ -243,7 +201,7 @@ func generateTemplateAndManifest(t *testing.T, aksTfOpts *terraform.Options) str
 func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedManifestPath string) {
 
 	// Setup the kubectl config and namespace context - grabbed from Terraform module output
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), jobNamespace)
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), jobNamespace)
 
 	// Clean up
 	defer func() {
@@ -251,7 +209,7 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 		// We want to run this before the deletes because if the Job fails, test will try to exit with this function
 		output, err := k8s.RunKubectlAndGetOutputE(t, options, "logs", fmt.Sprintf("job/%s", jobName), "-n", jobNamespace)
 		require.NoError(t, err)
-		t.Logf("Job Log: \n %s", output)
+		logger.Logf(t, "Job Log: \n %s", output)
 
 		// Delete all job resources
 		k8s.KubectlDelete(t, options, tempKustomizedManifestPath)
@@ -287,31 +245,31 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 // Calls Kubernetes to get post-deployment health checks done
 func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Namespace: "azure-arc" - which is static
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), "azure-arc")
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), "azure-arc")
 
 	// Get Last Connectivity Time for connected cluster
 	jsonPathQuery := "{.items[*]['status.lastConnectivityTime']}"
 	clusterConnectTime, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "connectedclusters", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery)) // %q adds quotes
 	require.NoError(t, err)
-	t.Logf("Last Cluster Connectivity Time (UTC): %s", clusterConnectTime)
+	logger.Logf(t, "Last Cluster Connectivity Time (UTC): %s", clusterConnectTime)
 
 	t.Run("k8s_ensure_cluster_connectivity_time_not_empty", func(t *testing.T) {
 		assert.NotEmpty(t, clusterConnectTime, "Cluster Connectivity Time is not empty")
 	})
 
 	// Get Data Controller Health Status
-	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), os.Getenv("ARC_DATA_NAMESPACE"))
+	options = k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), os.Getenv("ARC_DATA_NAMESPACE"))
 
 	jsonPathQuery = "{.items[*]['status']}"
 	controllerStatus, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
 	require.NoError(t, err)
-	t.Logf("Controller Status: %s", controllerStatus)
+	logger.Logf(t, "Controller Status: %s", controllerStatus)
 
 	jsonPathQuery = "{.items[*]['status.state']}"
 	controllerState, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
 	require.NoError(t, err)
 	controllerState = regexp.MustCompile(`^"(.*)"$`).ReplaceAllString(controllerState, `$1`) // Remove quotes
-	t.Logf("Controller State: %s", controllerState)
+	logger.Logf(t, "Controller State: %s", controllerState)
 
 	t.Run("k8s_ensure_controller_is_ready", func(t *testing.T) {
 		assert.Equal(t, "ready", strings.ToLower(controllerState), "Controller is in Ready State")
@@ -320,7 +278,7 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
 	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
 
-	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
+	logger.Logf(t, "All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
 
 	t.Run("k8s_ensure_one_or_more_microsoft_crd_apigroups_installed", func(t *testing.T) {
 		assert.GreaterOrEqual(t, len(microsoftApiGroups), 1, "One or more Microsoft CRD APIGroups are installed in the Cluster")
@@ -397,9 +355,9 @@ func validateDataServicesWithARM(t *testing.T, aksRbacOpts *terraform.Options) {
 // Calls Kubernetes to get post-offboarding health checks done
 func validateArcOffboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
-	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", aksTfModuleDir), "default")
+	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), "default")
 	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
-	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
+	logger.Logf(t, "All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
 	t.Run("k8s_ensure_all_microsoft_crd_apigroups_uninstalled", func(t *testing.T) {
 		assert.LessOrEqual(t, len(microsoftApiGroups), 0, "All Microsoft CRD APIGroups are uninstalled from the Cluster")
 	})

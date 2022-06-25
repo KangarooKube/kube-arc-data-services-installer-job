@@ -6,6 +6,7 @@ local/
 
 # VS Code
 *.code-workspace
+.vscode/*.log
 
 # Binaries for programs and plugins
 *.exe
@@ -82,3 +83,7 @@ kubeconfig
 
 # Generated kustomization files
 **/base/kustomization.yaml
+
+# JUnit report
+*.xml
+*.out
