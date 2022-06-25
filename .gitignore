@@ -85,4 +85,5 @@ kubeconfig
 **/base/kustomization.yaml
 
 # JUnit report
-report.xml
+*.xml
+*.out

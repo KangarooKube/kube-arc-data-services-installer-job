@@ -61,3 +61,16 @@ jobs:
       - name: Run Integration tests
         working-directory: ci/test
         run: make integration-test
+
+      - name: Generate Test Summary
+        uses: test-summary/action@v1
+        with:
+          paths: |
+                        ci/test/integration-test-report.xml
+        if: always()
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "ci/test/integration-test-report.xml"

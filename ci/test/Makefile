@@ -9,11 +9,13 @@ report-prep:
 unit-test: report-prep unit-test-aks
 
 unit-test-aks:
-	go test -timeout $(timeout) -tags "unit aks" -v | go-junit-report -set-exit-code > report.xml 
+	go test -timeout $(timeout) -tags "unit aks" -v | tee unit-tests.out
+	cat unit-tests.out | go-junit-report > unit-test-report.xml
 
 integration-test: report-prep integration-test-aks
 
 integration-test-aks:
-	go test -timeout $(timeout) -tags "integration aks" -v | go-junit-report -set-exit-code > report.xml 
+	go test -timeout $(timeout) -tags "integration aks" -v | tee integration-tests.out
+	cat integration-tests.out | go-junit-report > integration-test-report.xml
 
 test: unit-test integration-test

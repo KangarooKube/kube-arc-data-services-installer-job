@@ -50,11 +50,11 @@ jobs:
         uses: test-summary/action@v1
         with:
           paths: |
-                        ci/test/report.xml
+                        ci/test/unit-test-report.xml
         if: always()
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
         with:
-          files: "ci/test/report.xml"
+          files: "ci/test/unit-test-report.xml"
