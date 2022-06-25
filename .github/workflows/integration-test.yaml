@@ -5,10 +5,15 @@ on:
     branches:
       - 'main'
 
-  # For initial testing purposes - remove to not break the bank!
   push:
-    branches:
-      - '*'
+    # For initial testing purposes - remove to not break the bank!
+    branches: [ '*' ]
+    # Only trigger for changes in these paths
+    paths:
+    - "ci/**"
+    - "kustomize/**"
+    - "src/**"
+    - ".github/workflows/integration-test.yaml"
 
 # Replace these to modify Job parameters
 env:
