@@ -18,6 +18,7 @@ import (
 	// Terragrunt
 	"github.com/gruntwork-io/terratest/modules/azure"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 
@@ -81,9 +82,9 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 		// Run job in Onboard mode
 		os.Setenv("DELETE_FLAG", "false")
-		t.Logf("Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
+		logger.Logf(t, "Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
 		tempKustomizedManifestPath := generateTemplateAndManifest(t, aksTfOpts)
-		t.Log("Deployable manifests in temp folder here:", tempKustomizedManifestPath)
+		logger.Log(t, "Deployable manifests in temp folder here:", tempKustomizedManifestPath)
 
 		// Apply Kustomize Payload and check job health - deletes the job and the temporary manifest folder
 		runJobWithK8s(t, aksTfOpts, tempKustomizedManifestPath)
@@ -106,9 +107,9 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 		// Run job in Destroy mode
 		os.Setenv("DELETE_FLAG", "true")
-		t.Logf("Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
+		logger.Logf(t, "Running Job with DELETE_FLAG: %s", os.Getenv("DELETE_FLAG"))
 		tempKustomizedManifestPath := generateTemplateAndManifest(t, aksTfOpts)
-		t.Log("Deployable manifests in temp folder here:", tempKustomizedManifestPath)
+		logger.Log(t, "Deployable manifests in temp folder here:", tempKustomizedManifestPath)
 
 		// Apply Kustomize Payload and check job health - deletes the job and the temporary manifest folder
 		runJobWithK8s(t, aksTfOpts, tempKustomizedManifestPath)
@@ -134,7 +135,7 @@ func validateNodeCountWithARM(t *testing.T, aksTfOpts *terraform.Options) {
 	cluster, err := azure.GetManagedClusterE(t, expectedResourceGroupName, expectedClusterName, "")
 	require.NoError(t, err)
 	actualCount := *(*cluster.ManagedClusterProperties.AgentPoolProfiles)[0].Count
-	t.Logf("Found cluster with %d nodes", actualCount)
+	logger.Logf(t, "Found cluster with %d nodes", actualCount)
 
 	t.Run("aks_node_count_greater_than_equals_three", func(t *testing.T) {
 		assert.GreaterOrEqual(t, int32(actualCount), int32(0), "AKS Node Count >= 3")
@@ -208,7 +209,7 @@ func runJobWithK8s(t *testing.T, aksRbacOpts *terraform.Options, tempKustomizedM
 		// We want to run this before the deletes because if the Job fails, test will try to exit with this function
 		output, err := k8s.RunKubectlAndGetOutputE(t, options, "logs", fmt.Sprintf("job/%s", jobName), "-n", jobNamespace)
 		require.NoError(t, err)
-		t.Logf("Job Log: \n %s", output)
+		logger.Logf(t, "Job Log: \n %s", output)
 
 		// Delete all job resources
 		k8s.KubectlDelete(t, options, tempKustomizedManifestPath)
@@ -250,7 +251,7 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	jsonPathQuery := "{.items[*]['status.lastConnectivityTime']}"
 	clusterConnectTime, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "connectedclusters", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery)) // %q adds quotes
 	require.NoError(t, err)
-	t.Logf("Last Cluster Connectivity Time (UTC): %s", clusterConnectTime)
+	logger.Logf(t, "Last Cluster Connectivity Time (UTC): %s", clusterConnectTime)
 
 	t.Run("k8s_ensure_cluster_connectivity_time_not_empty", func(t *testing.T) {
 		assert.NotEmpty(t, clusterConnectTime, "Cluster Connectivity Time is not empty")
@@ -262,13 +263,13 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	jsonPathQuery = "{.items[*]['status']}"
 	controllerStatus, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
 	require.NoError(t, err)
-	t.Logf("Controller Status: %s", controllerStatus)
+	logger.Logf(t, "Controller Status: %s", controllerStatus)
 
 	jsonPathQuery = "{.items[*]['status.state']}"
 	controllerState, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "datacontrollers", fmt.Sprintf("-o=jsonpath=%q", jsonPathQuery))
 	require.NoError(t, err)
 	controllerState = regexp.MustCompile(`^"(.*)"$`).ReplaceAllString(controllerState, `$1`) // Remove quotes
-	t.Logf("Controller State: %s", controllerState)
+	logger.Logf(t, "Controller State: %s", controllerState)
 
 	t.Run("k8s_ensure_controller_is_ready", func(t *testing.T) {
 		assert.Equal(t, "ready", strings.ToLower(controllerState), "Controller is in Ready State")
@@ -277,7 +278,7 @@ func validateArcOnboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) {
 	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
 	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
 
-	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
+	logger.Logf(t, "All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
 
 	t.Run("k8s_ensure_one_or_more_microsoft_crd_apigroups_installed", func(t *testing.T) {
 		assert.GreaterOrEqual(t, len(microsoftApiGroups), 1, "One or more Microsoft CRD APIGroups are installed in the Cluster")
@@ -356,7 +357,7 @@ func validateArcOffboardedWithK8s(t *testing.T, aksRbacOpts *terraform.Options) 
 	// Get all Api Groups with Microsoft owned CRDs installed in Cluster
 	options := k8s.NewKubectlOptions("", fmt.Sprintf("%s/kubeconfig", testFolder), "default")
 	microsoftApiGroups := getAllMicrosoftCrdApiGroups(t, options)
-	t.Logf("All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
+	logger.Logf(t, "All Microsoft APIGroups for CRDs installed in the Cluster: %s", microsoftApiGroups)
 	t.Run("k8s_ensure_all_microsoft_crd_apigroups_uninstalled", func(t *testing.T) {
 		assert.LessOrEqual(t, len(microsoftApiGroups), 0, "All Microsoft CRD APIGroups are uninstalled from the Cluster")
 	})

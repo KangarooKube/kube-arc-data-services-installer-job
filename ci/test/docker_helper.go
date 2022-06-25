@@ -14,6 +14,10 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 
+	// Terragrunt
+	"github.com/gruntwork-io/terratest/modules/logger"
+
+	// Testing
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,7 +76,7 @@ func print(t *testing.T, rd io.Reader) error {
 	scanner := bufio.NewScanner(rd)
 	for scanner.Scan() {
 		lastLine = scanner.Text()
-		t.Log(scanner.Text())
+		logger.Log(t, scanner.Text())
 	}
 
 	errLine := &ErrorLine{}
