@@ -6,8 +6,13 @@ on:
       - 'main'
   push:
     # Unit tests are cheap, so we can run them on every branch
-    branches:
-      - '*'
+    branches: [ '*' ]
+    # Only trigger for changes in these paths
+    paths:
+    - "ci/**"
+    - "kustomize/**"
+    - "src/**"
+    - ".github/workflows/unit-test.yaml"
 
 concurrency:
   group: ${{ github.head_ref || github.ref_name }}
