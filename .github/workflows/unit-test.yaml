@@ -14,10 +14,6 @@ on:
     - "src/**"
     - ".github/workflows/unit-test.yaml"
 
-concurrency:
-  group: ${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: false
-
 jobs:
   go-tests:
     name: Run Unit Tests (terratest)
@@ -49,3 +45,10 @@ jobs:
           SPN_SUBSCRIPTION_ID: ${{ secrets.SPN_SUBSCRIPTION_ID }}
           SPN_TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
         run: make unit-test
+
+      - name: Generate test summary Test Summary
+        uses: test-summary/action@v1
+        with:
+          paths: |
+                        ci/test/report.xml
+        if: always()

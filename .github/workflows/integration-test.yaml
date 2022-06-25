@@ -10,10 +10,6 @@ on:
     branches:
       - '*'
 
-concurrency:
-  group: ${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: false
-
 # Replace these to modify Job parameters
 env:
   SPN_CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}

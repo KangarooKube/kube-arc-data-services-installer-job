@@ -83,3 +83,6 @@ kubeconfig
 
 # Generated kustomization files
 **/base/kustomization.yaml
+
+# JUnit report
+report.xml
