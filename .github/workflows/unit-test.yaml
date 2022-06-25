@@ -46,9 +46,15 @@ jobs:
           SPN_TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
         run: make unit-test
 
-      - name: Generate test summary Test Summary
+      - name: Generate Test Summary
         uses: test-summary/action@v1
         with:
           paths: |
                         ci/test/report.xml
         if: always()
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "ci/test/report.xml"
