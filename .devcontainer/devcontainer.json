@@ -13,9 +13,13 @@
 		"seccomp=unconfined",
 		"--env-file=.devcontainer/devcontainer.env"
 	],
-	
+
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
+		"go.toolsManagement.checkForUpdates": "local",
+		"go.useLanguageServer": true,
+		"go.gopath": "/go",
+		"go.goroot": "/usr/local/go",
 		"terminal.integrated.profiles.linux": {
 			"bash": {
 				"path": "/usr/bin/bash"
@@ -26,22 +30,29 @@
 	
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
-        // Azure stuff
-		"ms-vscode.azurecli",
-        "ms-azuretools.vscode-docker",
-        // Terraform stuff
-		"4ops.terraform",
-        "ms-azuretools.vscode-azureterraform",
-		"HashiCorp.terraform",
-        // Kubernetes stuff
-		"ms-kubernetes-tools.vscode-kubernetes-tools",
-        // Github stuff
-		"github.copilot",
-		// Go stuff
 		"golang.go",
-		// VSCode stuff
-		"esbenp.prettier-vscode",
-		"foxundermoon.shell-format"
+		"eamodio.gitlens", // IDE Git information
+		"ms-azuretools.vscode-docker", // Docker integration and linting
+		"ms-vscode.azurecli", // Azure CLI integration
+		"shardulm94.trailing-spaces", // Show trailing spaces
+		"Gruntfuggly.todo-tree", // Highlights TODO comments
+		"bierner.emojisense", // Emoji sense for markdown
+		"stkb.rewrap", // rewrap comments after n characters on one line
+		"github.vscode-pull-request-github", // Github interaction
+		"redhat.vscode-yaml", // Kubernetes, Drone syntax highlighting
+		"bajdzis.vscode-database", // Supports connections to mysql or postgres, over SSL, socked
+		"IBM.output-colorizer", // Colorize your output/test logs
+		"hashicorp.terraform", // Terraform syntax highlighting
+		"github.copilot", // Copilot integration
+		"spikespaz.vscode-smoothtype", // smooth cursor animation
+		"pkief.material-icon-theme", // Better file extension icons
+		"yzhang.markdown-all-in-one", // Markdown visualizer
+		"ms-vscode.makefile-tools" // Makefile
+		// "mohsen1.prettify-json", // Prettify JSON data
+		// "zxh404.vscode-proto3", // Supports Proto syntax
+		// "jrebocho.vscode-random", // Generates random values
+		// "alefragnani.Bookmarks", // Manage bookmarks
+		// "quicktype.quicktype", // Paste JSON as code
 	],
 	
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.

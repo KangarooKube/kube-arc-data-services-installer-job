@@ -5,8 +5,8 @@ local/
 *.iml
 
 # VS Code
-.vscode
 *.code-workspace
+.vscode/*.log
 
 # Binaries for programs and plugins
 *.exe
@@ -34,7 +34,10 @@ integration-coverage.html
 # Wix
 *.wixobj
 *.wixpdb
+
+# Devcontainer
 .devcontainer/devcontainer.env
+.devcontainer/ghcr-push.sh
 
 # Local .terraform directories
 **/.terraform/*
@@ -54,7 +57,9 @@ crash.*.log
 *.tfvars
 *.tfvars.json
 .terraform.lock.hcl
-*/.terraform/*
+**/.terraform/*
+**/.test-data/*
+**/.temp*
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
@@ -78,3 +83,7 @@ terraform.rc
 
 # Kubeconfigs
 kubeconfig
+
+# JUnit report
+*.xml
+*.out

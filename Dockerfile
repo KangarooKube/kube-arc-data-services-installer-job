@@ -26,6 +26,11 @@ RUN apt-get update && apt-get upgrade -y && \
 # Uncomment for Cache invalidation to get the latest CLI Extensions
 # ARG CACHEBUST=1
 
+# Run dos2unix to convert the files to UNIX line endings
+RUN apt-get update && apt-get install -y dos2unix
+COPY ./src/scripts/install-arc-data-services.sh /home/container-user/install-arc-data-services.sh
+RUN dos2unix /home/container-user/install-arc-data-services.sh
+
 USER container-user
 
 WORKDIR /home/container-user
@@ -37,7 +42,5 @@ RUN az extension add --name connectedk8s && \
     az extension add --name k8s-configuration && \
     az extension add --name customlocation && \
     az extension add --name arcdata
-
-COPY ./src/scripts /home/container-user
 
 ENTRYPOINT ["/bin/bash", "./install-arc-data-services.sh"]

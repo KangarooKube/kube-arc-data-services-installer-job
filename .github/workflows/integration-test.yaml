@@ -1,0 +1,123 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+  push:
+    # For initial testing purposes - remove to not break the bank in future!
+    branches: [ '*' ]
+    # Only trigger for changes in these paths
+    paths:
+    - "ci/**"
+    - "kustomize/**"
+    - "src/**"
+    - ".github/workflows/integration-test.yaml"
+
+# Replace these to modify Job parameters
+env:
+  SPN_CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
+  SPN_CLIENT_SECRET: ${{ secrets.SPN_CLIENT_SECRET }}
+  SPN_SUBSCRIPTION_ID: ${{ secrets.SPN_SUBSCRIPTION_ID }}
+  SPN_TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
+  AZDATA_USERNAME : boor
+  AZDATA_PASSWORD : acntorPRESTO!
+  CONNECTED_CLUSTER_LOCATION : eastasia
+  ARC_DATA_LOCATION : eastasia
+  CONNECTED_CLUSTER : clusterName
+  ARC_DATA_EXT : arc-data-bootstrapper
+  ARC_DATA_EXT_AUTO_UPGRADE : false
+  ARC_DATA_EXT_VERSION : 1.2.19831003
+  ARC_DATA_NAMESPACE : azure-arc-data
+  ARC_DATA_CONTROLLER : azure-arc-data-controller
+  ARC_DATA_CONTROLLER_LOCATION : southeastasia
+
+jobs:
+  go-tests:
+    name: Run Integration Tests on fresh Kubernetes Clusters(s)
+    runs-on: ubuntu-latest
+
+    # For publishing Test Results
+    permissions:
+      checks: write
+      pull-requests: write
+
+    steps:
+
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.18
+
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.2.3
+          terraform_wrapper: false
+
+      - uses: docker-practice/actions-setup-docker@master
+      - name: Validate Docker install
+        run: docker version
+
+      - uses: azure/setup-kubectl@v2.0
+      - name: Validate Kubectl install
+        run: kubectl version --client
+
+      - name: Download Go modules
+        working-directory: ci/test
+        run: go mod download
+
+      - name: Run Integration tests
+        working-directory: ci/test
+        run: make integration-test
+
+      - name: Generate Test Summary
+        uses: test-summary/action@v1
+        with:
+          paths: |
+                        ci/test/integration-test-report.xml
+        if: always()
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        id: test-results
+        if: always()
+        with:
+          files: "ci/test/integration-test-report.xml"
+          check_name: Integration Test Results
+          comment_title: "Integration Test Results"
+          comment_mode: always
+
+      - name: Set badge color
+        shell: bash
+        run: |
+          case ${{ fromJSON( steps.test-results.outputs.json ).conclusion }} in
+            success)
+              echo "BADGE_COLOR=31c653" >> $GITHUB_ENV
+              ;;
+            failure)
+              echo "BADGE_COLOR=800000" >> $GITHUB_ENV
+              ;;
+            neutral)
+              echo "BADGE_COLOR=696969" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Create badge
+        uses: emibcn/badge-action@d6f51ff11b5c3382b3b88689ae2d6db22d9737d1
+        with:
+          label: Integration Tests
+          status: '${{ fromJSON( steps.test-results.outputs.json ).formatted.stats.tests }} tests, ${{ fromJSON( steps.test-results.outputs.json ).formatted.stats.runs }} runs: ${{ fromJSON( steps.test-results.outputs.json ).conclusion }}'
+          color: ${{ env.BADGE_COLOR }}
+          path: integration-test-badge.svg
+
+      - name: Upload badge to Gist
+        # Upload only for master branch
+        if: >
+          github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.event.workflow_run.head_branch == 'master' || github.event.workflow_run.head_branch == 'main'
+        uses: andymckay/append-gist-action@1fbfbbce708a39bd45846f0955ed5521f2099c6d
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gistURL: https://gist.githubusercontent.com/mdrakiburrahman/187e8eefa854cf5469f7ceecc76b8c86
+          file: integration-test-badge.svg
