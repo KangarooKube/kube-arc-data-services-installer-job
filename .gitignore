@@ -34,7 +34,10 @@ integration-coverage.html
 # Wix
 *.wixobj
 *.wixpdb
+
+# Devcontainer
 .devcontainer/devcontainer.env
+.devcontainer/ghcr-push.sh
 
 # Local .terraform directories
 **/.terraform/*
@@ -80,9 +83,6 @@ terraform.rc
 
 # Kubeconfigs
 kubeconfig
-
-# Generated kustomization files
-**/base/kustomization.yaml
 
 # JUnit report
 *.xml

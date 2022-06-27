@@ -1,0 +1,19 @@
+resources:
+  - job.yaml
+  - serviceaccount.yaml
+  - clusterrolebinding.yaml
+  - namespace.yaml
+configMapGenerator:
+- name: config-envs
+  namespace: azure-arc-kubernetes-bootstrap
+  envs:
+  - configs/configMap.env
+secretGenerator:
+- name: secret-envs
+  namespace: azure-arc-kubernetes-bootstrap
+  envs:
+  - configs/secret.env
+images:
+- name: kube-arc-data-services-installer-job
+  newName: ghcr.io/kangarookube/kube-arc-data-services-installer-job
+  newTag: 418785bee7ca713c807449d9685b5ebbedc49223

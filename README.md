@@ -28,6 +28,8 @@ envsubst \
     > $BASE_PATH/kustomization.yaml
 ```
 
+> This will overwrite the sample `kustomize/base/kustomization.yaml` file with this repo with your own.
+
 ### Variables for `ConfigMap` and `Secret`
 
 Same set works for AKS and OpenShift - kustomize overlay contains the differences:
