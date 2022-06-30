@@ -81,7 +81,8 @@ jobs:
         with:
           image-name: ${{ steps.meta.outputs.tags }}-scan
           severity-threshold: high
-          run-quality-checks: true
+          run-quality-checks: false
+          trivy-version: "0.29.1" 
 
       # Display scan report
       #- name: Inspect action SARIF report
