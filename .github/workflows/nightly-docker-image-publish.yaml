@@ -77,9 +77,9 @@ jobs:
       #    fail-build: true
       - name: Scan image
         id: scan-image
-        uses: Azure/container-scan@v0
+        uses: Azure/container-scan@v0.1
         with:
-          image: ${{ steps.meta.outputs.tags }}-scan
+          image-name: ${{ steps.meta.outputs.tags }}-scan
           severity-threshold: high
           run-quality-checks: true
 
