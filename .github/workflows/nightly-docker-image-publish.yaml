@@ -1,10 +1,5 @@
 name: nightly-docker-image-publish
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 on:
   schedule:
     - cron: '45 0 * * *'
@@ -72,19 +67,26 @@ jobs:
           load: true
       
       # Local scan image for vulnerabilities 
+      #- name: Scan image
+      #  id: scan-image
+      #  uses: anchore/scan-action@v3.2.5
+      #  with:
+      #    image: ${{ steps.meta.outputs.tags }}-scan
+      #    severity-cutoff: critical
+      #    acs-report-enable: true
+      #    fail-build: true
       - name: Scan image
         id: scan-image
-        uses: anchore/scan-action@v3.2.5
+        uses: Azure/container-scan@v0
         with:
           image: ${{ steps.meta.outputs.tags }}-scan
-          severity-cutoff: critical
-          acs-report-enable: true
-          fail-build: true
+          severity-threshold: high
+          run-quality-checks: true
 
       # Display scan report
-      - name: Inspect action SARIF report
-        run: cat ${{ steps.scan-image.outputs.sarif }}
-        if: ${{ always() }}
+      #- name: Inspect action SARIF report
+      #  run: cat ${{ steps.scan-image.outputs.sarif }}
+      #  if: ${{ always() }}
         
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
