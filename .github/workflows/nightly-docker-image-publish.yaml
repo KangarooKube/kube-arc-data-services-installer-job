@@ -58,14 +58,22 @@ jobs:
           load: true
       
       # Local scan image for vulnerabilities 
-      - name: Scan image
+      - name: Scan image for Vulnerabilities
         id: scan-image
-        uses: Azure/container-scan@v0.1
+        uses: aquasecurity/trivy-action@master
         with:
-          image-name: ${{ steps.meta.outputs.tags }}-scan
-          severity-threshold: HIGH
-          run-quality-checks: true
-          trivy-version: "0.29.1" 
+          image-ref: '${{ steps.meta.outputs.tags }}-scan'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        #uses: Azure/container-scan@v0.1
+        #with:
+        #  image-name: ${{ steps.meta.outputs.tags }}-scan
+        #  severity-threshold: HIGH
+        #  run-quality-checks: true
+        #  trivy-version: "0.29.1" 
         
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
