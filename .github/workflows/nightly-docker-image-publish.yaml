@@ -65,7 +65,7 @@ jobs:
           image-ref: '${{ steps.meta.outputs.tags }}-scan'
           format: 'table'
           exit-code: '1'
-          ignore-unfixed: true
+          ignore-unfixed: false
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
         #uses: Azure/container-scan@v0.1
