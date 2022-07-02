@@ -344,11 +344,11 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
     
     # Delete Arcdata CRDs
     echo "INFO | Deleting Arc Data CRDs"
-    kubectl delete crd $(kubectl get crd | grep arcdata | cut -f1 -d' ')
+    kubectl delete crd $(kubectl get crd | grep arcdata | cut -f1 -d' ') --ignore-not-found=true
 
     # Delete Arcdata mutatingwebhookconfiguration
     echo "INFO | Deleting Arc Data Mutating Webhook Configs"
-    kubectl delete mutatingwebhookconfiguration arcdata.microsoft.com-webhook-"${ARC_DATA_NAMESPACE}"
+    kubectl delete mutatingwebhookconfiguration arcdata.microsoft.com-webhook-"${ARC_DATA_NAMESPACE}" --ignore-not-found=true
 
   else 
     echo "INFO | Bootstrapper Extension $ARC_DATA_EXT doest not exist, skipping delete"
@@ -387,12 +387,12 @@ if [ "${DELETE_FLAG}" = 'true' ]; then
   # 0. Handle OpenShift pre-req cleanup
   if [ "${OPENSHIFT}" = 'true' ]; then
     echo "INFO | Removing OpenShift pre-reqs"
-    kubectl delete -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-routes.yaml'
-    kubectl delete -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-scc.yaml'
+    kubectl delete --ignore-not-found=true -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-routes.yaml'
+    kubectl delete --ignore-not-found=true -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-scc.yaml'
   fi
 
   echo "INFO | Deleting Arc Data Namespace"
-  kubectl delete namespace "${ARC_DATA_NAMESPACE}"
+  kubectl delete --ignore-not-found=true namespace "${ARC_DATA_NAMESPACE}"
 
   echo ""
   echo "----------------------------------------------------------------------------------"
