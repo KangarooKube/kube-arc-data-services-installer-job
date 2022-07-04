@@ -16,4 +16,4 @@ secretGenerator:
 images:
 - name: kube-arc-data-services-installer-job
   newName: ghcr.io/kangarookube/kube-arc-data-services-installer-job
-  newTag: 418785bee7ca713c807449d9685b5ebbedc49223
+  newTag: d80eeca2864066850c2d3a707bff805680ea4388
