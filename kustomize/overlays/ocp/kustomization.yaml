@@ -1,8 +1,10 @@
 bases:
  - ../../base
+
 patchesStrategicMerge:
  - env.yaml
  - job-scc.yaml
+
 configMapGenerator:
 - name: dc-config
   namespace: azure-arc-kubernetes-bootstrap
