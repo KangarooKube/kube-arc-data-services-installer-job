@@ -4,6 +4,8 @@ set -e -o pipefail
 docker build --pull --rm --platform=linux/amd64 . -t create-new-release:build
 docker run -it --rm --platform=linux/amd64 docker.io/library/create-new-release:build >release.env.tmp
 
+sed -i -e "s/\r//g" release.env.tmp
+
 source release.env.tmp
 
 echo "For Azure ARC Data Services versions review https://docs.microsoft.com/en-us/azure/azure-arc/data/version-log"
