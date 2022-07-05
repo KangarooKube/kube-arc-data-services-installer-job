@@ -408,6 +408,12 @@ if [ "${OPENSHIFT}" = 'true' ]; then
   # Create namespace if not exists via apply
   kubectl create namespace "${ARC_DATA_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
 
+  # Add annotations for Arc Data Container UID and GID and overwrite the random one OpenShift generates
+  # https://cookbook.openshift.org/users-and-role-based-access-control/why-do-my-applications-run-as-a-random-user-id.html
+  # https://docs.microsoft.com/en-us/azure/azure-arc/data/create-data-controller-using-kubernetes-native-tools#create-a-namespace-in-which-the-data-controller-will-be-created
+  kubectl annotate namespace "${ARC_DATA_NAMESPACE}" openshift.io/sa.scc.supplemental-groups="1000700001/10000" --overwrite
+  kubectl annotate namespace "${ARC_DATA_NAMESPACE}" openshift.io/sa.scc.uid-range="1000700001/10000" --overwrite
+
   # Create resources at namespace scope - cluster scoped resources will be created outside namespace automatically
   kubectl apply -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-scc.yaml'
 fi
