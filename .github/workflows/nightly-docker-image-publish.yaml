@@ -1,4 +1,4 @@
-name: nightly-docker-image-publish
+name: Nightly Docker Image Publish
 
 on:
   schedule:
@@ -54,6 +54,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           tags: ${{ steps.meta.outputs.tags }}-scan
+          build-args: ""
           push: false
           load: true
       
