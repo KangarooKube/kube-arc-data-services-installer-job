@@ -40,4 +40,6 @@ echo "EXT_K8S_CUSTOMLOCATION_VER=${EXT_K8S_CUSTOMLOCATION_VER}" >> ../release.en
 echo "ARC_DATA_EXT_VER=${ARC_DATA_EXT_VER}" >> ../release.env
 echo "ARC_DATA_CONTROLLER_VER=${ARC_DATA_CONTROLLER_VER}" >> ../release.env
 
+# clean up tmp files
 rm release.env.tmp
+rm release.env.tmp-e
