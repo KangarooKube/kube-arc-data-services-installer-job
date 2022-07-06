@@ -37,22 +37,22 @@ func createBuildArgFromFile(t *testing.T, aksTfOpts *terraform.Options, releaseE
 
 // Full list:
 // export TENANT_ID=$SPN_TENANT_ID                               # Set from existing env variable
-// export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID					 #                 "
-// export CLIENT_ID=$SPN_CLIENT_ID								 #                 "
-// export CLIENT_SECRET=$SPN_CLIENT_SECRET					     #                 "
-// export AZDATA_USERNAME='boor'						 		 # boor
+// export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID                   #                 "
+// export CLIENT_ID=$SPN_CLIENT_ID                               #                 "
+// export CLIENT_SECRET=$SPN_CLIENT_SECRET                       #                 "
+// export AZDATA_USERNAME='boor'                                 # boor
 // export AZDATA_PASSWORD='acntorPRESTO!'                        # acntorPRESTO!
 // export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"  # Append "arc" to existing RG's name
 // export CONNECTED_CLUSTER_LOCATION="eastasia"                  # If set use, if not, set to eastasia
 // export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"	     # Append "arc-data" to  existing RG's name
 // export ARC_DATA_LOCATION="eastasia"                           # If set use, if not, set to eastasia
-// export CONNECTED_CLUSTER=$clusterName					     # Use name of AKS Cluster created by Terraform
-// export ARC_DATA_EXT="arc-data-bootstrapper"					 # arc-data-bootstrapper
-// export ARC_DATA_EXT_AUTO_UPGRADE="false"						 # false - because bootstrapper version is explicitly set
-// export ARC_DATA_NAMESPACE="azure-arc-data"					 # azure-arc-data
-// export ARC_DATA_CONTROLLER="azure-arc-data-controller"		 # azure-arc-data-controller
+// export CONNECTED_CLUSTER=$clusterName                         # Use name of AKS Cluster created by Terraform
+// export ARC_DATA_EXT="arc-data-bootstrapper"                   # arc-data-bootstrapper
+// export ARC_DATA_EXT_AUTO_UPGRADE="false"                      # false - because bootstrapper version is explicitly set
+// export ARC_DATA_NAMESPACE="azure-arc-data"                    # azure-arc-data
+// export ARC_DATA_CONTROLLER="azure-arc-data-controller"        # azure-arc-data-controller
 // export ARC_DATA_CONTROLLER_LOCATION="southeastasia"           # If set use, if not, set to southeastasia
-// export DELETE_FLAG='false'									 # Starts false - will be overwritten to true during test
+// export DELETE_FLAG='false'                                    # Starts false - will be overwritten to true during test
 
 func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
 	os.Setenv("TENANT_ID", os.Getenv("SPN_TENANT_ID"))
