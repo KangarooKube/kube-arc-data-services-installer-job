@@ -15,5 +15,5 @@ secretGenerator:
   - configs/secret.env
 images:
 - name: kube-arc-data-services-installer-job
-  newName: arcCIAksTfvb4wpeacr.azurecr.io/kube-arc-data-services-installer-job
-  newTag: 0.1.0
+  newName: ghcr.io/kangarookube/kube-arc-data-services-installer-job
+  newTag: d80eeca2864066850c2d3a707bff805680ea4388
