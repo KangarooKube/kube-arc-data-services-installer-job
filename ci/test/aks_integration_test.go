@@ -71,7 +71,11 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 	test_structure.RunTestStage(t, "build_and_push_image", func() {
 		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
-		buildTagPushDockerImage(t, aksTfOpts)
+		buildArgs := createBuildArgFromFile(t, aksTfOpts, releaseEnvFilePath)
+
+		logger.Log(t, "Building image...")
+
+		buildTagPushDockerImage(t, aksTfOpts, buildArgs)
 	})
 
 	test_structure.RunTestStage(t, "onboard_arc", func() {
@@ -142,7 +146,7 @@ func validateNodeCountWithARM(t *testing.T, aksTfOpts *terraform.Options) {
 	})
 }
 
-func buildTagPushDockerImage(t *testing.T, aksTfOpts *terraform.Options) {
+func buildTagPushDockerImage(t *testing.T, aksTfOpts *terraform.Options, buildArgs map[string]string) {
 	// Grab Container Registry variables
 	acrName := terraform.Output(t, aksTfOpts, "acr_name")
 	tag := fmt.Sprintf("%s.azurecr.io/%s:%s", acrName, containerName, containerVersion)
@@ -152,7 +156,7 @@ func buildTagPushDockerImage(t *testing.T, aksTfOpts *terraform.Options) {
 	require.NoError(t, err)
 
 	// Build image from repo's Dockerfile, tag to ACR
-	imageBuildTag(t, cli, dockerFilePath, tag)
+	imageBuildTag(t, cli, dockerFilePath, tag, buildArgs)
 
 	// Push image to ACR
 	var authConfig = types.AuthConfig{
