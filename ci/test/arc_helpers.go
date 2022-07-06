@@ -44,7 +44,7 @@ func createBuildArgFromFile(t *testing.T, aksTfOpts *terraform.Options, releaseE
 // export AZDATA_PASSWORD='acntorPRESTO!'                        # acntorPRESTO!
 // export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"  # Append "arc" to existing RG's name
 // export CONNECTED_CLUSTER_LOCATION="eastasia"                  # If set use, if not, set to eastasia
-// export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"	     # Append "arc-data" to  existing RG's name
+// export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"      # Append "arc-data" to  existing RG's name
 // export ARC_DATA_LOCATION="eastasia"                           # If set use, if not, set to eastasia
 // export CONNECTED_CLUSTER=$clusterName                         # Use name of AKS Cluster created by Terraform
 // export ARC_DATA_EXT="arc-data-bootstrapper"                   # arc-data-bootstrapper
