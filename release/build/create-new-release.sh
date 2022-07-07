@@ -10,35 +10,49 @@ source release.env.tmp
 
 echo "For Azure ARC Data Services versions review https://docs.microsoft.com/en-us/azure/azure-arc/data/version-log"
 
-if [[ -z "${ARC_DATA_EXT_VER}" ]]; then
-    read -p 'Input ARC_DATA_EXT_VER: ' ARC_DATA_EXT_VER
+if [[ -z "${RELEASE_VERSION}" ]]; then
+    read -p 'Input RELEASE_VERSION: ' RELEASE_VERSION
 fi
 
-if [[ -z "${ARC_DATA_CONTROLLER_VER}" ]]; then
-    read -p 'Input ARC_DATA_CONTROLLER_VER: ' ARC_DATA_CONTROLLER_VER
+if [[ -z "${ARC_DATA_EXT_VERSION}" ]]; then
+    read -p 'Input ARC_DATA_EXT_VERSION: ' ARC_DATA_EXT_VERSION
 fi
 
-while true; do
-    read -p "Does azdata extension version ${EXT_ARCDATA_VER} match Azure ARC Data Services release? " yn
-    case $yn in
-        [Yy]* ) break;;
-        [Nn]* ) read -p 'Input EXT_ARCDATA_VER: ' EXT_ARCDATA_VER; exit;;
-        * ) echo "Please answer yes or no.";;
-    esac
-done
+if [[ -z "${ARC_DATA_CONTROLLER_VERSION}" ]]; then
+    read -p 'Input ARC_DATA_CONTROLLER_VERSION: ' ARC_DATA_CONTROLLER_VERSION
+fi
+
+if [[ -z "${IS_WORKFLOW}" ]]; then
+    while true; do
+        read -p "Does az cli arcdata extension version ${EXT_ARCDATA_VERSION} match Azure ARC Data Services release? " yn
+        case $yn in
+            [Yy]* ) break;;
+            [Nn]* ) read -p 'Input EXT_ARCDATA_VERSION: ' EXT_ARCDATA_VERSION; exit;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
+else
+    if [[ "${DESIRED_EXT_ARCDATA_VERSION}" ]]; then
+        if [[ "${DESIRED_EXT_ARCDATA_VERSION}" != "${EXT_ARCDATA_VERSION}" ]]; then
+            echo "Replacing az cli arcdata extension version ${EXT_ARCDATA_VERSION} with ${DESIRED_EXT_ARCDATA_VERSION}"
+            export EXT_ARCDATA_VERSION=${DESIRED_EXT_ARCDATA_VERSION}
+        fi
+    fi
+fi
 
 # output release details
 echo "# Release Version Details" > ../release.env
-echo "HELM_VER=${HELM_VER}" >> ../release.env
-echo "KUBECTL_VER=${KUBECTL_VER}" >> ../release.env
-echo "AZCLI_VER=${AZCLI_VER}" >> ../release.env
-echo "EXT_K8S_CONFIGURATION_VER=${EXT_K8S_CONFIGURATION_VER}" >> ../release.env
-echo "EXT_ARCDATA_VER=${EXT_ARCDATA_VER}" >> ../release.env
-echo "EXT_K8S_EXTENSION_VER=${EXT_K8S_EXTENSION_VER}" >> ../release.env
-echo "EXT_K8S_CONNECTEDK8S_VER=${EXT_K8S_CONNECTEDK8S_VER}" >> ../release.env
-echo "EXT_K8S_CUSTOMLOCATION_VER=${EXT_K8S_CUSTOMLOCATION_VER}" >> ../release.env
-echo "ARC_DATA_EXT_VER=${ARC_DATA_EXT_VER}" >> ../release.env
-echo "ARC_DATA_CONTROLLER_VER=${ARC_DATA_CONTROLLER_VER}" >> ../release.env
+echo "RELEASE_VERSION=${RELEASE_VERSION}" >> ../release.env
+echo "HELM_VERSION=${HELM_VERSION}" >> ../release.env
+echo "KUBECTL_VERSION=${KUBECTL_VERSION}" >> ../release.env
+echo "AZCLI_VERSION=${AZCLI_VERSION}" >> ../release.env
+echo "EXT_K8S_CONFIGURATION_VERSION=${EXT_K8S_CONFIGURATION_VERSION}" >> ../release.env
+echo "EXT_ARCDATA_VERSION=${EXT_ARCDATA_VERSION}" >> ../release.env
+echo "EXT_K8S_EXTENSION_VERSION=${EXT_K8S_EXTENSION_VERSION}" >> ../release.env
+echo "EXT_K8S_CONNECTEDK8S_VERSION=${EXT_K8S_CONNECTEDK8S_VERSION}" >> ../release.env
+echo "EXT_K8S_CUSTOMLOCATION_VERSION=${EXT_K8S_CUSTOMLOCATION_VERSION}" >> ../release.env
+echo "ARC_DATA_EXT_VERSION=${ARC_DATA_EXT_VERSION}" >> ../release.env
+echo "ARC_DATA_CONTROLLER_VERSION=${ARC_DATA_CONTROLLER_VERSION}" >> ../release.env
 
 # clean up tmp files
 rm release.env.tmp

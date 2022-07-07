@@ -1,0 +1,58 @@
+name: Create Release Branch
+on:
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: 'Release version (ie 1.8.0) - Major and Minor should match ARC DS image tag'
+        required: true
+      arcDataControllerImageTag:
+        description: 'ImageTag for '
+        required: true
+      arcDataServicesExtVersion:
+        description: 'imageTag for '
+        required: true
+      azArcDataExtVersion:
+        description: 'Input if latest az cli arcdata exet '
+        required: false
+
+env:
+  RELEASE_VERSION: ${{ github.event.inputs.releaseVersion }}
+  ARC_DATA_CONTROLLER_VERSION: ${{ github.event.inputs.arcDataControllerImageTag }}
+  ARC_DATA_EXT_VERSION: ${{ github.event.inputs.arcDataServicesExtVersion }}
+  DESIRED_EXT_ARCDATA_VERSION: ${{ github.event.inputs.azArcDataExtVersion }}
+  IS_WORKFLOW: true
+
+jobs:
+  release-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Install Docker
+      uses: docker-practice/actions-setup-docker@master
+    - name: Validate Docker install
+      run: docker version
+    - name: Create release branch
+      run: git checkout -b release/${{ github.event.inputs.releaseVersion }}
+    - name: Initialize Git Config
+      run: |
+       git config user.name "GitHub Actions"
+       git config user.email noreply@github.com
+    - name: Update Changelog
+      uses: thomaseizinger/keep-a-changelog-new-release@v1
+      with:
+        version: ${{ github.event.inputs.releaseVersion }}
+        tag: ${{ github.event.inputs.releaseVersion }}
+
+
+    - name: Commit changelog and manifest files
+      id: make-commit
+      run: |
+        git add release/release.env
+        git add CHANGELOG.md
+        git commit --message "Prepare release ${{ github.event.inputs.releaseVersion }}"
+        echo "::set-output name=commit::$(git rev-parse HEAD)"
+    - name: Push new branch
+      run: git push origin release/${{ github.event.inputs.releaseVersion }}
+    
