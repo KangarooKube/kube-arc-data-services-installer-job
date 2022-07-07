@@ -6,6 +6,8 @@ docker run -it --rm --platform=linux/amd64 docker.io/library/create-new-release:
 
 sed -i -e "s/\r//g" release.env.tmp
 
+sed -i -e "s/\r//g" release.env.tmp
+
 source release.env.tmp
 
 echo "For Azure ARC Data Services versions review https://docs.microsoft.com/en-us/azure/azure-arc/data/version-log"
@@ -43,4 +45,6 @@ echo "ARC_DATA_CONTROLLER_VERSION=${ARC_DATA_CONTROLLER_VERSION}" >> ../release.
 
 echo -e "\n$(cat ../release.env)"
 
+# clean up tmp files
 rm release.env.tmp
+rm release.env.tmp-e
