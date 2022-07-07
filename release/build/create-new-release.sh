@@ -6,8 +6,6 @@ docker run -it --rm --platform=linux/amd64 docker.io/library/create-new-release:
 
 sed -i -e "s/\r//g" release.env.tmp
 
-sed -i -e "s/\r//g" release.env.tmp
-
 source release.env.tmp
 
 echo "For Azure ARC Data Services versions review https://docs.microsoft.com/en-us/azure/azure-arc/data/version-log"
@@ -21,11 +19,11 @@ if [[ -z "${ARC_DATA_CONTROLLER_VERSION}" ]]; then
 fi
 
 while true; do
-    read -p "Does arcdata Azure CLI Extension version ${EXT_ARCDATA_VERSION} match Azure ARC Data Services release notes? " yn
+    read -p "Does arcdata Azure CLI Extension version ${EXT_ARCDATA_VERSION} match Azure ARC Data Services release notes (Y/N)? " yn
     case $yn in
         [Yy]* ) break;;
         [Nn]* ) read -p 'Input EXT_ARCDATA_VERSION override: ' EXT_ARCDATA_VERSION; break;;
-        * ) echo "Please answer yes or no.";;
+        * ) echo "Please answer Y or N.";;
     esac
 done
 
@@ -47,4 +45,3 @@ echo -e "\n$(cat ../release.env)"
 
 # clean up tmp files
 rm release.env.tmp
-rm release.env.tmp-e
