@@ -31,16 +31,36 @@ type ErrorDetail struct {
 }
 
 // Build image from local Dockerfile and Tag it
-func imageBuildTag(t *testing.T, dockerClient *client.Client, dockerFilePath, tag string) {
+func imageBuildTag(t *testing.T, dockerClient *client.Client, dockerFilePath, tag string, buildArgs map[string]string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*15) // Long context to support debugging
 	defer cancel()
 
 	tar, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{})
 	require.NoError(t, err)
 
+	// Convert buildArgs from map[string]string to map[string]*string
+	buildArgsPtr := make(map[string]*string, len(buildArgs))
+
+	// Convert buildArgs map to a slice so we can create a pointer
+	temp := []string{}
+	i := 0
+	for k, v := range buildArgs {
+		temp = append(temp, v)
+		buildArgsPtr[k] = &temp[i]
+		i++
+	}
+
+	// Print all pairs being passed into buildArgs
+	logger.Log(t, "Received the following buildArgs from envfile: \n")
+	for k, v := range buildArgsPtr {
+		logger.Logf(t, "%s:%s", k, *v)
+	}
+
 	opts := types.ImageBuildOptions{
 		Dockerfile: "Dockerfile",
+		NoCache:    true,
 		Tags:       []string{tag},
+		BuildArgs:  buildArgsPtr,
 		Remove:     true,
 	}
 	res, err := dockerClient.ImageBuild(ctx, tar, opts)

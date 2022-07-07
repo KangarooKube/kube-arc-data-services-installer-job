@@ -2,15 +2,32 @@ FROM --platform=amd64 ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Set component versions
-ARG HELM_VER=3.9.0-1
-ARG KUBECTL_VER=1.24.2-00
-ARG AZCLI_VER=2.37.0-1~jammy
-ARG EXT_K8S_CONFIGURATION_VER=1.5.1
-ARG EXT_ARCDATA_VER=1.4.2
-ARG EXT_K8S_EXTENSION_VER=1.2.3
-ARG EXT_K8S_CONNECTEDK8S_VER=1.2.9
-ARG EXT_K8S_CUSTOMLOCATION_VER=0.1.3
+# Set build time variables
+ARG HELM_VERSION
+ARG KUBECTL_VERSION
+ARG AZCLI_VERSION
+ARG EXT_K8S_CONFIGURATION_VERSION
+ARG EXT_ARCDATA_VERSION
+ARG EXT_K8S_EXTENSION_VERSION
+ARG EXT_K8S_CONNECTEDK8S_VERSION
+ARG EXT_K8S_CUSTOMLOCATION_VERSION
+# Set runtime defaults
+ARG ARC_DATA_EXT_VERSION
+ARG ARC_DATA_CONTROLLER_VERSION
+ENV ARC_DATA_EXT_VERSION=$ARC_DATA_EXT_VERSION
+ENV ARC_DATA_CONTROLLER_VERSION=$ARC_DATA_CONTROLLER_VERSION
+
+# Validate
+RUN echo "HELM_VERSION: ${HELM_VERSION}\n" \
+ && echo "KUBECTL_VERSION: ${KUBECTL_VERSION}\n" \
+ && echo "AZCLI_VERSION: ${AZCLI_VERSION}\n" \
+ && echo "EXT_K8S_CONFIGURATION_VERSION: ${EXT_K8S_CONFIGURATION_VERSION}\n" \
+ && echo "EXT_ARCDATA_VERSION: ${EXT_ARCDATA_VERSION}\n" \
+ && echo "EXT_K8S_EXTENSION_VERSION: ${EXT_K8S_EXTENSION_VERSION}\n" \
+ && echo "EXT_K8S_CONNECTEDK8S_VERSION: ${EXT_K8S_CONNECTEDK8S_VERSION}\n" \
+ && echo "EXT_K8S_CUSTOMLOCATION_VERSION: ${EXT_K8S_CUSTOMLOCATION_VERSION}\n" \
+ && echo "ARC_DATA_EXT_VERSION: ${ARC_DATA_EXT_VERSION}\n" \
+ && echo "ARC_DATA_CONTROLLER_VERSION: ${ARC_DATA_CONTROLLER_VERSION}\n"
 
 USER root
 
@@ -24,7 +41,7 @@ RUN apt-get update && apt-get upgrade -y && \
     AZ_REPO=$(lsb_release -cs) && \
     echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install kubectl=${KUBECTL_VER} helm=${HELM_VER} azure-cli=${AZCLI_VER} jq -y && \
+    apt-get install kubectl=${KUBECTL_VERSION} helm=${HELM_VERSION} azure-cli=${AZCLI_VERSION} jq -y && \
     apt-get remove apt-transport-https gnupg lsb-release -y && \
     apt-get autoclean && apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives && \
@@ -41,10 +58,10 @@ WORKDIR /home/container-user
 
 ENV HOME=/home/container-user
 
-RUN az extension add --name connectedk8s --version ${EXT_K8S_CONNECTEDK8S_VER} && \
-    az extension add --name k8s-extension --version ${EXT_K8S_EXTENSION_VER} && \
-    az extension add --name k8s-configuration --version ${EXT_K8S_CONFIGURATION_VER} && \
-    az extension add --name customlocation --version ${EXT_K8S_CUSTOMLOCATION_VER} && \
-    az extension add --name arcdata --version ${EXT_ARCDATA_VER}
+RUN az extension add --name connectedk8s --version ${EXT_K8S_CONNECTEDK8S_VERSION} && \
+    az extension add --name k8s-extension --version ${EXT_K8S_EXTENSION_VERSION} && \
+    az extension add --name k8s-configuration --version ${EXT_K8S_CONFIGURATION_VERSION} && \
+    az extension add --name customlocation --version ${EXT_K8S_CUSTOMLOCATION_VERSION} && \
+    az extension add --name arcdata --version ${EXT_ARCDATA_VERSION}
 
 ENTRYPOINT ["/bin/bash", "./install-arc-data-services.sh"]

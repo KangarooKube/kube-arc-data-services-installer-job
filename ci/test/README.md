@@ -66,7 +66,22 @@ go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks
 # 3. Destroy when done development
 SKIP_deploy_aks=true \
 go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
+
+# All options available
+
+# SKIP_teardown_aks=true \
+# SKIP_deploy_aks=true \
+# SKIP_validate_aks=true \
+# SKIP_build_and_push_image=true \
+# SKIP_onboard_arc=true \
+# SKIP_validate_arc_onboarding=true \
+# SKIP_destroy_arc=true \
+# SKIP_validate_arc_offboarding=true \
 ```
 
 Tips:
 * After the first time deploy, always include `SKIP_deploy_aks=true`, because otherwise Terraform will try to deploy a whole new state file and whole new resources with a uniqueID, and that will mess up your Terratest local folder. If you do this, workaround is to go inside the Terratest local folder and replace the UniqueID as it used to be (get this from Blob Storage).
+* If debugging doesn't work with `F5`, try to `Go: Restart language server`. If that still doesn't work, rebuild the container, and install all the popup packages, then try again.
+  
+  > First time might take a bit of time to spin up as Terraform spins up
+* Append `2>&1 | tee test.log` to pipe to screen and file

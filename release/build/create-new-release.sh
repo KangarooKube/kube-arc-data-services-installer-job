@@ -2,7 +2,9 @@
 set -e -o pipefail
 
 docker build --pull --rm --platform=linux/amd64 . -t create-new-release:build
-docker run -it --rm --platform=linux/amd64 docker.io/library/create-new-release:build >release.env.tmp
+docker run -it --rm --platform=linux/amd64 docker.io/library/create-new-release:build > release.env.tmp
+
+sed -i -e "s/\r//g" release.env.tmp
 
 sed -i -e "s/\r//g" release.env.tmp
 
@@ -41,18 +43,21 @@ else
 fi
 
 # output release details
+echo -e "\nProducing release.env file:"
 echo "# Release Version Details" > ../release.env
 echo "RELEASE_VERSION=${RELEASE_VERSION}" >> ../release.env
 echo "HELM_VERSION=${HELM_VERSION}" >> ../release.env
 echo "KUBECTL_VERSION=${KUBECTL_VERSION}" >> ../release.env
 echo "AZCLI_VERSION=${AZCLI_VERSION}" >> ../release.env
 echo "EXT_K8S_CONFIGURATION_VERSION=${EXT_K8S_CONFIGURATION_VERSION}" >> ../release.env
-echo "EXT_ARCDATA_VERSION=${EXT_ARCDATA_VERSION}" >> ../release.env
 echo "EXT_K8S_EXTENSION_VERSION=${EXT_K8S_EXTENSION_VERSION}" >> ../release.env
 echo "EXT_K8S_CONNECTEDK8S_VERSION=${EXT_K8S_CONNECTEDK8S_VERSION}" >> ../release.env
 echo "EXT_K8S_CUSTOMLOCATION_VERSION=${EXT_K8S_CUSTOMLOCATION_VERSION}" >> ../release.env
+echo "EXT_ARCDATA_VERSION=${EXT_ARCDATA_VERSION}" >> ../release.env
 echo "ARC_DATA_EXT_VERSION=${ARC_DATA_EXT_VERSION}" >> ../release.env
 echo "ARC_DATA_CONTROLLER_VERSION=${ARC_DATA_CONTROLLER_VERSION}" >> ../release.env
+
+echo -e "\n$(cat ../release.env)"
 
 # clean up tmp files
 rm release.env.tmp

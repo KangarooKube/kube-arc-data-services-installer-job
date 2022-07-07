@@ -26,6 +26,7 @@ const (
 	containerName           = "kube-arc-data-services-installer-job"
 	containerVersion        = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
 	dockerFilePath          = "../../"
+	releaseEnvFilePath      = "../../release/release.env"
 	namePrefix              = "arcCIAksTf"
 	deploymentLocation      = "canadacentral"
 	jobNamespace            = "azure-arc-kubernetes-bootstrap"
