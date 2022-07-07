@@ -325,9 +325,6 @@ func validateConnectedClusterWithARM(t *testing.T, aksRbacOpts *terraform.Option
 		assert.Equal(t, false, *extensionProperty.Properties.AutoUpgradeMinorVersion, "Data Services Extension Auto Upgrade is disabled")
 	})
 
-	t.Run("arm_ensure_data_service_bootstrapper_extension_matches_declared_state", func(t *testing.T) {
-		assert.Equal(t, os.Getenv("ARC_DATA_EXT_VERSION"), *extensionProperty.Properties.Version, "Data Services Extension correct version is installed")
-	})
 }
 
 // // Function calls ARM to validate Data Services
