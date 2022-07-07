@@ -6,6 +6,7 @@ Kubernetes job for installing Azure ARC and Azure ARC Data Services on a Kuberne
 
 | Tested on AKS and OpenShift 4.10.16
 
+> If you're on windows, run `find . -type f -print0 | xargs -0 -n 1 -P 4 dos2unix`
 ## Environment spinup
 
 You will need:

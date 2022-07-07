@@ -42,16 +42,6 @@ export TF_VAR_location='canadacentral'
 export TF_VAR_tags='{ Source = "terraform", Owner = "Your Name", Project = "Messing around with terraform manually" }'
 ```
 
-Configure Azure Storage Account Backend State info before running `init`:
-
-```bash
-export stateFileKeyName="kube-arc-data-services-installer-job/${TF_VAR_resource_prefix}/terraform.tfstate"
-export TF_CLI_ARGS_init="-backend-config='storage_account_name=${TFSTATE_STORAGE_ACCOUNT_NAME}'"
-export TF_CLI_ARGS_init="$TF_CLI_ARGS_init -backend-config='container_name=${TFSTATE_STORAGE_ACCOUNT_CONTAINER_NAME}'"
-export TF_CLI_ARGS_init="$TF_CLI_ARGS_init -backend-config='access_key=${TFSTATE_STORAGE_ACCOUNT_KEY}'"
-export TF_CLI_ARGS_init="$TF_CLI_ARGS_init -backend-config='key=${stateFileKeyName}'"
-```
-
 Deploy the code:
 
 ```bash
@@ -85,7 +75,25 @@ dos2unix /workspaces/kube-arc-data-services-installer-job/src/scripts/install-ar
 # Build & Push
 cd /workspaces/kube-arc-data-services-installer-job
 docker login $acrName.azurecr.io -u $SPN_CLIENT_ID -p $SPN_CLIENT_SECRET
-docker build -t $acrName.azurecr.io/$containerName:$containerVersion .
+
+# Read in environment variables for --build-args
+source /workspaces/kube-arc-data-services-installer-job/release/release.env
+
+# Build via env variables
+docker build -t $acrName.azurecr.io/$containerName:$containerVersion \
+    --build-arg HELM_VERSION=${HELM_VERSION} \
+    --build-arg KUBECTL_VERSION=${KUBECTL_VERSION} \
+    --build-arg AZCLI_VERSION=${AZCLI_VERSION} \
+    --build-arg EXT_K8S_CONFIGURATION_VERSION=${EXT_K8S_CONFIGURATION_VERSION} \
+    --build-arg EXT_ARCDATA_VERSION=${EXT_ARCDATA_VERSION} \
+    --build-arg EXT_K8S_EXTENSION_VERSION=${EXT_K8S_EXTENSION_VERSION} \
+    --build-arg EXT_K8S_CONNECTEDK8S_VERSION=${EXT_K8S_CONNECTEDK8S_VERSION} \
+    --build-arg EXT_K8S_CUSTOMLOCATION_VERSION=${EXT_K8S_CUSTOMLOCATION_VERSION} \
+    --build-arg ARC_DATA_EXT_VERSION=${ARC_DATA_EXT_VERSION} \
+    --build-arg ARC_DATA_CONTROLLER_VERSION=${ARC_DATA_CONTROLLER_VERSION} \
+    .
+
+# Push to ACR
 docker push $acrName.azurecr.io/$containerName:$containerVersion
 ```
 

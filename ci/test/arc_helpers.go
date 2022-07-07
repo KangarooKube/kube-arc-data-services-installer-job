@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 
 	// Azure
@@ -17,28 +18,41 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/kubernetesconfiguration/armkubernetesconfiguration" // Extensions
 )
 
+// Read variables from release.env file and convert into Docker buildArgs
+// These dependencies drive the solution behavior - and are sourced from the release.env file, injected into the Docker Container as Build Arguments.
+//
+// For example for Arc, these three variables below are intertwined with the image version:
+// 1. EXT_ARCDATA_VERSION -> dictates the image tags available for deployment with "az arcdata ..."
+// 2. ARC_DATA_EXT_VERSION -> dictates the Helm Chart version applied to the Cluster
+// 3. ARC_DATA_CONTROLLER_VERSION -> dictates the data controller image tag deployed
+
+func createBuildArgFromFile(t *testing.T, aksTfOpts *terraform.Options, releaseEnvFilePath string) map[string]string {
+	buildArgs, err := godotenv.Read(releaseEnvFilePath)
+	require.NoError(t, err)
+	return buildArgs
+}
+
 // Injects environment variables for Arc ConfigMap/Secret creation for Kustomize
 // This function first checks if a value is already passed in, if not, it sets reasonable defaults
 
 // Full list:
-// export TENANT_ID=$SPN_TENANT_ID                                 # Set from existing env variable
-// export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID						 #                 "
-// export CLIENT_ID=$SPN_CLIENT_ID								 #                 "
-// export CLIENT_SECRET=$SPN_CLIENT_SECRET					     #                 "
-// export AZDATA_USERNAME='boor'						 		 # boor
+// export TENANT_ID=$SPN_TENANT_ID                               # Set from existing env variable
+// export SUBSCRIPTION_ID=$SPN_SUBSCRIPTION_ID                   #                 "
+// export CLIENT_ID=$SPN_CLIENT_ID                               #                 "
+// export CLIENT_SECRET=$SPN_CLIENT_SECRET                       #                 "
+// export AZDATA_USERNAME='boor'                                 # boor
 // export AZDATA_PASSWORD='acntorPRESTO!'                        # acntorPRESTO!
 // export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"  # Append "arc" to existing RG's name
 // export CONNECTED_CLUSTER_LOCATION="eastasia"                  # If set use, if not, set to eastasia
-// export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"	     # Append "arc-data" to  existing RG's name
+// export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"      # Append "arc-data" to  existing RG's name
 // export ARC_DATA_LOCATION="eastasia"                           # If set use, if not, set to eastasia
-// export CONNECTED_CLUSTER=$clusterName					     # Use name of AKS Cluster created by Terraform
-// export ARC_DATA_EXT="arc-data-bootstrapper"					 # arc-data-bootstrapper
-// export ARC_DATA_EXT_AUTO_UPGRADE="false"						 # false
-// export ARC_DATA_EXT_VERSION="1.2.19831003"                    # if set use, if not, throw error
-// export ARC_DATA_NAMESPACE="azure-arc-data"					 # azure-arc-data
-// export ARC_DATA_CONTROLLER="azure-arc-data-controller"		 # azure-arc-data-controller
+// export CONNECTED_CLUSTER=$clusterName                         # Use name of AKS Cluster created by Terraform
+// export ARC_DATA_EXT="arc-data-bootstrapper"                   # arc-data-bootstrapper
+// export ARC_DATA_EXT_AUTO_UPGRADE="false"                      # false - because bootstrapper version is explicitly set
+// export ARC_DATA_NAMESPACE="azure-arc-data"                    # azure-arc-data
+// export ARC_DATA_CONTROLLER="azure-arc-data-controller"        # azure-arc-data-controller
 // export ARC_DATA_CONTROLLER_LOCATION="southeastasia"           # If set use, if not, set to southeastasia
-// export DELETE_FLAG='false'									 # Starts false - will be overwritten to true during test
+// export DELETE_FLAG='false'                                    # Starts false - will be overwritten to true during test
 
 func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
 	os.Setenv("TENANT_ID", os.Getenv("SPN_TENANT_ID"))
@@ -50,21 +64,20 @@ func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
 
 	// Unique prefix for this deployment
 	inputResourcePrefix := aksTfOpts.Vars["resource_prefix"].(string)
-
 	os.Setenv("CONNECTED_CLUSTER_RESOURCE_GROUP", fmt.Sprintf("%s-arc", inputResourcePrefix))
+	os.Setenv("ARC_DATA_RESOURCE_GROUP", fmt.Sprintf("%s-arc-data", inputResourcePrefix))
+	os.Setenv("CONNECTED_CLUSTER", fmt.Sprintf("%s%s", inputResourcePrefix, "aks"))
+
+	// Set reasonable defaults if not set
 	if os.Getenv("CONNECTED_CLUSTER_LOCATION") == "" {
 		os.Setenv("CONNECTED_CLUSTER_LOCATION", "eastasia")
 	}
-	os.Setenv("ARC_DATA_RESOURCE_GROUP", fmt.Sprintf("%s-arc-data", inputResourcePrefix))
 	if os.Getenv("ARC_DATA_LOCATION") == "" {
 		os.Setenv("ARC_DATA_LOCATION", "eastasia")
 	}
-	os.Setenv("CONNECTED_CLUSTER", fmt.Sprintf("%s%s", inputResourcePrefix, "aks"))
+	// Opinionated defaults for test harness
 	os.Setenv("ARC_DATA_EXT", "arc-data-bootstrapper")
 	os.Setenv("ARC_DATA_EXT_AUTO_UPGRADE", "false")
-	if os.Getenv("ARC_DATA_EXT_VERSION") == "" {
-		t.Fatalf("You must specify the bootstrapper extension version explicitly, e.g. ARC_DATA_EXT_VERSION=1.2.19831003")
-	}
 	os.Setenv("ARC_DATA_NAMESPACE", "azure-arc-data")
 	os.Setenv("ARC_DATA_CONTROLLER", "azure-arc-data-controller")
 	if os.Getenv("ARC_DATA_CONTROLLER_LOCATION") == "" {

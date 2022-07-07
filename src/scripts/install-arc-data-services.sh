@@ -43,6 +43,41 @@ else
   fi
 fi
 
+# Docker release.env variables
+bootstrapper_version_param=()
+if [[ -z "${ARC_DATA_EXT_VERSION}" ]]; then
+  echo "ERROR | variable ARC_DATA_EXT_VERSION is required for onboarding with this image at this time, please pass in through container image's release.env"
+  exit 1
+else
+  bootstrapper_version_param+=(--version "${ARC_DATA_EXT_VERSION}")
+  # Check if auto upgrade is set to true
+  if [ "${ARC_DATA_EXT_AUTO_UPGRADE}" = 'true' ]; then
+    echo "INFO | variable ARC_DATA_EXT_AUTO_UPGRADE is set to true even though ARC_DATA_EXT_VERSION is specified, forcing false"
+  fi
+  # Because bootstrapper version is set, Auto Upgrade must be off, else CLI will error
+  export ARC_DATA_EXT_AUTO_UPGRADE='false'
+fi
+
+# Controller image validation
+if [[ -z "${ARC_DATA_CONTROLLER_VERSION}" ]]; then
+  echo "ERROR | variable ARC_DATA_CONTROLLER_VERSION is required for onboarding, please pass in through container image's release.env."
+  exit 1
+fi
+
+# Compare .spec.docker.imageTag in control.json with container environment variable
+ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON=$(cat "./custom/control.json" | jq -r .spec.docker.imageTag)
+
+if [[ "${ARC_DATA_CONTROLLER_VERSION}" != "${ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON}" ]]; then
+  echo "ERROR | variable ARC_DATA_CONTROLLER_VERSION = '${ARC_DATA_CONTROLLER_VERSION}' does not match control.json's spec.docker.imageTag = '${ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON}', something went wrong in the release or you applied an incorrect manifest for this release."
+  exit 1
+fi
+
+echo ""
+echo "INFO | Onboarding to Bootstrapper version: ${ARC_DATA_EXT_VERSION}"
+echo "INFO | Onboarding to Data Controller version: ${ARC_DATA_CONTROLLER_VERSION}"
+echo ""
+
+# K8s Configmap variables
 if [[ -z "${DELETE_FLAG}" ]]; then
   echo "INFO | DELETE_FLAG is not set, defaulting to false"
   export DELETE_FLAG='false'
@@ -124,12 +159,6 @@ if [[ -z "${ARC_DATA_EXT}" ]]; then
   export ARC_DATA_EXT
 fi
 
-if [[ -z "${ARC_DATA_EXT_AUTO_UPGRADE}" ]]; then
-  echo "INFO | variable ARC_DATA_EXT_AUTO_UPGRADE is not set, defaulting to true"
-  ARC_DATA_EXT_AUTO_UPGRADE='true'
-  export ARC_DATA_EXT_AUTO_UPGRADE
-fi
-
 if [[ -z "${ARC_DATA_NAMESPACE}" ]]; then
   echo "ERROR | variable ARC_DATA_NAMESPACE is required."
   exit 1
@@ -160,11 +189,6 @@ else
   AZDATA_METRICSUI_PASSWORD=${AZDATA_PASSWORD}
   export AZDATA_LOGSUI_PASSWORD
   export AZDATA_METRICSUI_PASSWORD
-fi
-
-bootstrapper_version_param=()
-if [[ -n "${ARC_DATA_EXT_VERSION}" ]]; then
-  bootstrapper_version_param+=(--version "${ARC_DATA_EXT_VERSION}")
 fi
 
 custom_location_oid_param=()

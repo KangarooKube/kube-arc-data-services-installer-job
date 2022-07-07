@@ -87,3 +87,7 @@ kubeconfig
 # JUnit report
 *.xml
 *.out
+
+# Go
+*__debug_bin
+*.log
