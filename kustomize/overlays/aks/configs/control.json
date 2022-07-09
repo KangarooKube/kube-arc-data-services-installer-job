@@ -13,7 +13,7 @@
         },
         "docker": {
             "registry": "mcr.microsoft.com",
-            "repository": "arcdata/preview",
+            "repository": "arcdata/test, arcdata/preview, arcdata",
             "imageTag": "v1.9.0_2022-07-12",
             "imagePullPolicy": "Always"
         },

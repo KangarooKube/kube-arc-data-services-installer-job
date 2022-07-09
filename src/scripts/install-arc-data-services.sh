@@ -78,13 +78,41 @@ if [[ "${ARC_DATA_RELEASE_TRAIN}" != "stable" ]]; then
   bootstrapper_version_param+=(--config "systemDefaultValues.image=\"mcr.microsoft.com/arcdata/${ARC_DATA_RELEASE_TRAIN}/arc-bootstrapper:${ARC_DATA_CONTROLLER_VERSION}\"")
 fi
 
+# Override control.json with Container Image - this, for example, is required for parallel testing:
+#
+#   If the repo has a single control.json with the repo hard-coded, we must maintain multiple copies,
+#   and also figure out how to patch Kustomize based on releaseTrain from the release.env.xxx during runtime.
+#   This is non-trivial.
+#
+#   Therefore, better option is to log out the discrepency and let the user know about it, and force the control.json patch.
+
 # Compare .spec.docker.imageTag in control.json with container environment variable
 ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON=$(cat "./custom/control.json" | jq -r .spec.docker.imageTag)
 
 if [[ "${ARC_DATA_CONTROLLER_VERSION}" != "${ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON}" ]]; then
-  echo "ERROR | variable ARC_DATA_CONTROLLER_VERSION = '${ARC_DATA_CONTROLLER_VERSION}' does not match control.json's spec.docker.imageTag = '${ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON}', something went wrong in the release or you applied an incorrect manifest for this release."
-  exit 1
+  echo "WARNING | variable ARC_DATA_CONTROLLER_VERSION = '${ARC_DATA_CONTROLLER_VERSION}' does not match control.json's spec.docker.imageTag = '${ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON}' - control.json will be replaced"
 fi
+
+# Compare .spec.docker.repository in control.json with releaseTrain
+ARC_DATA_CONTROLLER_REPO_CONTROL_JSON=$(cat "./custom/control.json" | jq -r .spec.docker.repository)
+
+if [[ "${ARC_DATA_RELEASE_TRAIN}" == "stable" ]]; then
+  export ARC_DATA_CONTROLLER_DESIRED_REPO='arcdata'
+elif [[ "${ARC_DATA_RELEASE_TRAIN}" == "preview" ]]; then
+  export ARC_DATA_CONTROLLER_DESIRED_REPO='arcdata/preview'
+fi
+
+if [[ "${ARC_DATA_CONTROLLER_REPO_CONTROL_JSON}" != "${ARC_DATA_CONTROLLER_DESIRED_REPO}" ]]; then
+  echo "WARNING | control.json's spec.docker.repository = '${ARC_DATA_CONTROLLER_REPO_CONTROL_JSON}' does not match desired for ${ARC_DATA_RELEASE_TRAIN} = '${ARC_DATA_CONTROLLER_DESIRED_REPO}' - control.json will be replaced"
+fi
+
+# Copy ./custom/control.json to /tmp/custom/control.json, because K8s ConfigMap is readOnly
+mkdir -p /tmp/custom
+cp ./custom/control.json /tmp/custom/control.json
+
+# Patch via arcdata
+az arcdata dc config replace --path /tmp/custom/control.json --json-values "spec.docker.repository=${ARC_DATA_CONTROLLER_DESIRED_REPO}"
+az arcdata dc config replace --path /tmp/custom/control.json --json-values "spec.docker.imageTag=${ARC_DATA_CONTROLLER_VERSION}"
 
 # K8s Configmap variables
 if [[ -z "${DELETE_FLAG}" ]]; then
@@ -571,7 +599,8 @@ if [ "$ARC_DATA_CONTROLLER_EXISTS" = 'true' ]; then
 else 
     echo "INFO | Creating Data Controller $ARC_DATA_CONTROLLER"
 
-    az arcdata dc create --path './custom' \
+    # Uses the overwritten control.json from earlier
+    az arcdata dc create --path './tmp/custom' \
                          --name "${ARC_DATA_CONTROLLER}" \
                          --custom-location "${ARC_DATA_NAMESPACE}" \
                          --subscription "${SUBSCRIPTION_ID}" \
