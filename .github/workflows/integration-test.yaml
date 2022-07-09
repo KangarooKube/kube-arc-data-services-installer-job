@@ -66,7 +66,7 @@ jobs:
         working-directory: ci/test
         run: go mod download
 
-      - name: Run Integration tests
+      - name: Run Integration tests for all releaseTrains - preview, stable - in parallel
         working-directory: ci/test
         run: make -j integration-test
 

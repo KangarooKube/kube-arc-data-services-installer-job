@@ -20,11 +20,11 @@ integration-test-aks: integration-test-aks-preview integration-test-aks-stable
 
 # TODO: --release-train = test
 
-integration-test-aks-preview:
+integration-test-aks-preview: report-prep
 	go test -timeout $(timeout) -tags "integration aks" -v -args -releaseTrain=preview | tee integration-tests-preview.out
 	cat integration-tests-preview.out | go-junit-report > integration-test-report-preview.xml
 
-integration-test-aks-stable:
+integration-test-aks-stable: report-prep
 	go test -timeout $(timeout) -tags "integration aks" -v -args -releaseTrain=stable | tee integration-tests-stable.out
 	cat integration-tests-stable.out | go-junit-report > integration-test-report-stable.xml
 
