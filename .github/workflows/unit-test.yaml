@@ -53,7 +53,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: unit-test-report
+          name: unit-test-result
           path: ci/test/unit-test-*
 
   publish-badge:
@@ -61,8 +61,8 @@ jobs:
     needs: go-tests
     uses: ./.github/workflows/publish-badge.yaml
     with:
-      xml_file_artifact: unit-test-report
-      xml_file_path: ci/test/unit-test-report.xml
+      xml_file_artifact: unit-test-result
+      xml_file_path: unit-test-report.xml
       badge_file_name: unit-test-badge.svg
       check_name: Unit Test Results
     secrets:

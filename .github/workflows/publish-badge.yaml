@@ -3,7 +3,7 @@ name: Publish test result badge
 on:
   workflow_call:
     inputs:
-      xml_file_artifact:
+      run_artifact:
         required: true
         type: string
       xml_file_path:
@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name: ${{ inputs.xml_file_artifact }}
+          name: ${{ inputs.run_artifact }}
 
       - name: Display downloaded artifacts
         run: ls -R
