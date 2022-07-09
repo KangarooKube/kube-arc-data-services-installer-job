@@ -50,6 +50,17 @@ clean-local-terraform-state:
 	$(AT)echo " Cleaning up State files from Terraform CI run "
 	$(AT)echo ""
 	$(AT)make -C ci/test clean-local-terraform-state
+	@rm -rf /tmp/.terraform
+
+clean-local-test-files: clean-local-terraform-state
+	$(AT)echo ""
+	$(AT)echo " Cleaning up test log files "
+	$(AT)echo ""
+	@rm -rf $(TEST_ROOT)/*.out
+	@rm -rf $(TEST_ROOT)/*.log
+	@rm -rf $(TEST_ROOT)/*.xml
+	@rm -rf /tmp/TestAksIntegrationWithStages*
+	@rm -rf /tmp/TestAksResourcePlan*
 
 run-tests:
 	$(AT)echo ""
@@ -59,8 +70,10 @@ run-tests:
 
 # Platform specific variables
 #
-SHELL := /bin/bash
-ROOT_DIR := $(realpath $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/..)
+SHELL                := /bin/bash
+ROOT_DIR             := $(realpath $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/..)
+TEST_ROOT             = $(shell git rev-parse --show-toplevel)/ci/test
+KUSTOMIZE_ROOT        = $(shell git rev-parse --show-toplevel)/kustomize
 
 # Print help information to the console.
 #
@@ -72,6 +85,7 @@ help:
 	@echo "   make push-release                        - Builds image and publishes to ghcr.io."
 	@echo "   make clean-dos2unix                      - Before running a release, runs dos2unix to clean up in case of CRLF related pains."
 	@echo "   make run-tests                           - Run all tests - unit, integration, for all trains - preview, stable."
-	@echo "   make clean-local-terraform-state         - Clean up State files from local Terraform runs."
+	@echo "   make clean-local-terraform-state         - Clean up State files from local CI runs."
+	@echo "   make clean-local-test-files              - Clean up log files, JUnit results etc from local CI runs."
 	@echo "   make help                                - This help text."
 	@echo ""
