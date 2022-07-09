@@ -68,7 +68,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ci/test
-        run: make integration-test
+        run: make -j integration-test
 
       - name: Generate Test Summary
         uses: test-summary/action@v1

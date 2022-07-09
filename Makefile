@@ -53,9 +53,9 @@ clean-local-terraform-state:
 
 run-tests:
 	$(AT)echo ""
-	$(AT)echo " Running unit and integration tests across all release trains "
+	$(AT)echo " Running unit and integration tests across all release trains in parallel "
 	$(AT)echo ""
-	$(AT)make -C ci/test test
+	$(AT)make -j -C ci/test test
 
 # Platform specific variables
 #
@@ -71,6 +71,7 @@ help:
 	@echo "   make create-new-release-image            - Creates a new tagged docker image for relevant release train."
 	@echo "   make push-release                        - Builds image and publishes to ghcr.io."
 	@echo "   make clean-dos2unix                      - Before running a release, runs dos2unix to clean up in case of CRLF related pains."
+	@echo "   make run-tests                           - Run all tests - unit, integration, for all trains - preview, stable."
 	@echo "   make clean-local-terraform-state         - Clean up State files from local Terraform runs."
 	@echo "   make help                                - This help text."
 	@echo ""

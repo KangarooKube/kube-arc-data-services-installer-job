@@ -600,7 +600,7 @@ else
     echo "INFO | Creating Data Controller $ARC_DATA_CONTROLLER"
 
     # Uses the overwritten control.json from earlier
-    az arcdata dc create --path './tmp/custom' \
+    az arcdata dc create --path '/tmp/custom' \
                          --name "${ARC_DATA_CONTROLLER}" \
                          --custom-location "${ARC_DATA_NAMESPACE}" \
                          --subscription "${SUBSCRIPTION_ID}" \
