@@ -11,8 +11,8 @@ report-prep:
 unit-test: report-prep unit-test-aks
 
 unit-test-aks:
-	go test -timeout $(timeout) -tags "unit aks" -v | tee unit-tests.out
-	cat unit-tests.out | go-junit-report > unit-test-report.xml
+	go test -timeout $(timeout) -tags "unit aks" -v | tee unit-test-log.out
+	cat unit-test-log.out | go-junit-report > unit-test-report.xml
 
 integration-test: report-prep integration-test-aks
 
@@ -21,12 +21,12 @@ integration-test-aks: integration-test-aks-preview integration-test-aks-stable
 # TODO: --release-train = test
 
 integration-test-aks-preview: report-prep
-	go test -timeout $(timeout) -tags "integration aks" -v -args -releaseTrain=preview | tee integration-tests-preview.out
-	cat integration-tests-preview.out | go-junit-report > integration-test-report-preview.xml
+	go test -timeout $(timeout) -tags "integration aks" -v -args -releaseTrain=preview | tee integration-test-log-preview.out
+	cat integration-test-log-preview.out | go-junit-report > integration-test-report-preview.xml
 
 integration-test-aks-stable: report-prep
-	go test -timeout $(timeout) -tags "integration aks" -v -args -releaseTrain=stable | tee integration-tests-stable.out
-	cat integration-tests-stable.out | go-junit-report > integration-test-report-stable.xml
+	go test -timeout $(timeout) -tags "integration aks" -v -args -releaseTrain=stable | tee integration-test-log-stable.out
+	cat integration-test-log-stable.out | go-junit-report > integration-test-report-stable.xml
 
 test: unit-test integration-test
 

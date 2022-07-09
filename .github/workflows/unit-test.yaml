@@ -54,7 +54,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: unit-test-report
-          path: ci/test/unit-test-report.xml
+          path: ci/test/unit-test-*
 
   publish-badge:
     name: Publish badge from run

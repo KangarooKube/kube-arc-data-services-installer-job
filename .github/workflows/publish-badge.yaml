@@ -35,6 +35,9 @@ jobs:
         with:
           name: ${{ inputs.xml_file_artifact }}
 
+      - name: Display downloaded artifacts
+        run: ls -R
+
       - name: Generate Test Summary
         uses: test-summary/action@v1
         with:
