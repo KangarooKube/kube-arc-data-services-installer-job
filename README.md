@@ -1,6 +1,7 @@
 # kube-arc-data-services-installer-job
 [![Unit Test](https://gist.github.com/mdrakiburrahman/3f7efaed392e80ea103bb77441e0aa4a/raw/unit-test-badge.svg)](https://github.com/KangarooKube/kube-arc-data-services-installer-job/actions/workflows/unit-test.yaml)
-[![Integration Test](https://gist.github.com/mdrakiburrahman/187e8eefa854cf5469f7ceecc76b8c86/raw/integration-test-badge.svg)](https://github.com/KangarooKube/kube-arc-data-services-installer-job/actions/workflows/integration-test.yaml)
+[![Integration Test - Preview](https://gist.github.com/mdrakiburrahman/187e8eefa854cf5469f7ceecc76b8c86/raw/integration-test-report-preview-badge.svg)](https://github.com/KangarooKube/kube-arc-data-services-installer-job/actions/workflows/integration-test.yaml)
+[![Integration Test - Stable](https://gist.github.com/mdrakiburrahman/187e8eefa854cf5469f7ceecc76b8c86/raw/integration-test-report-stable-badge.svg)](https://github.com/KangarooKube/kube-arc-data-services-installer-job/actions/workflows/integration-test.yaml)
 
 Kubernetes job for installing Azure ARC and Azure ARC Data Services on a Kubernetes cluster.
 
