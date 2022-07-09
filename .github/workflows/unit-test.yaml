@@ -57,6 +57,8 @@ jobs:
           path: ci/test/unit-test-report.xml
 
   publish-badge:
+    name: Publish badge from run
+    needs: go-tests
     uses: ./.github/workflows/publish-badge.yaml
     with:
       xml_file_artifact: unit-test-report
