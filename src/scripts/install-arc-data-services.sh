@@ -43,25 +43,39 @@ else
   fi
 fi
 
-# Docker release.env variables
+echo ""
+echo "INFO | Arc Data Release variables received through onboarder image: "
+echo "INFO | | "
+echo "INFO | └── 1. Extension release train: ${ARC_DATA_RELEASE_TRAIN}"
+echo "INFO |     └── 2. Extension version: ${ARC_DATA_EXT_VERSION}"
+echo "INFO |         └── 3. Data Controller image tag: ${ARC_DATA_CONTROLLER_VERSION}"
+echo "INFO |             └── 4. CLI Extension downoad URL for az arcdata wheel file: ${ARC_DATA_WHL_URL}"
+echo ""
+
 bootstrapper_version_param=()
-if [[ -z "${ARC_DATA_EXT_VERSION}" ]]; then
-  echo "ERROR | variable ARC_DATA_EXT_VERSION is required for onboarding with this image at this time, please pass in through container image's release.env"
+if [[ -z "${ARC_DATA_RELEASE_TRAIN}" ]]; then
+  echo "ERROR | variable ARC_DATA_RELEASE_TRAIN is required for onboarding, please pass in through container image's release.env"
   exit 1
-else
-  bootstrapper_version_param+=(--version "${ARC_DATA_EXT_VERSION}")
-  # Check if auto upgrade is set to true
-  if [ "${ARC_DATA_EXT_AUTO_UPGRADE}" = 'true' ]; then
-    echo "INFO | variable ARC_DATA_EXT_AUTO_UPGRADE is set to true even though ARC_DATA_EXT_VERSION is specified, forcing false"
-  fi
-  # Because bootstrapper version is set, Auto Upgrade must be off, else CLI will error
-  export ARC_DATA_EXT_AUTO_UPGRADE='false'
 fi
 
-# Controller image validation
-if [[ -z "${ARC_DATA_CONTROLLER_VERSION}" ]]; then
-  echo "ERROR | variable ARC_DATA_CONTROLLER_VERSION is required for onboarding, please pass in through container image's release.env."
+if [[ -z "${ARC_DATA_EXT_VERSION}" ]]; then
+  echo "ERROR | variable ARC_DATA_EXT_VERSION is required for onboarding, please pass in through container image's release.env"
   exit 1
+fi
+
+# Because bootstrapper version is set, Auto Upgrade must be off, else CLI will error.
+# TODO: In future think of a way we can make this configurable alongside release train dependencies.
+export ARC_DATA_EXT_AUTO_UPGRADE='false'
+
+bootstrapper_version_param+=(--release-train "${ARC_DATA_RELEASE_TRAIN}")
+bootstrapper_version_param+=(--version "${ARC_DATA_EXT_VERSION}")
+bootstrapper_version_param+=(--auto-upgrade "${ARC_DATA_EXT_AUTO_UPGRADE}")
+bootstrapper_version_param+=(--config "Microsoft.CustomLocation.ServiceAccount=sa-arc-bootstrapper")
+bootstrapper_version_param+=(--config 'systemDefaultValues.imagePullPolicy="Always"')
+
+# If release train is not stable, specify bootstrapper image co-ordinates
+if [[ "${ARC_DATA_RELEASE_TRAIN}" != "stable" ]]; then
+  bootstrapper_version_param+=(--config "systemDefaultValues.image=\"mcr.microsoft.com/arcdata/${ARC_DATA_RELEASE_TRAIN}/arc-bootstrapper:${ARC_DATA_CONTROLLER_VERSION}\"")
 fi
 
 # Compare .spec.docker.imageTag in control.json with container environment variable
@@ -71,11 +85,6 @@ if [[ "${ARC_DATA_CONTROLLER_VERSION}" != "${ARC_DATA_CONTROLLER_VERSION_CONTROL
   echo "ERROR | variable ARC_DATA_CONTROLLER_VERSION = '${ARC_DATA_CONTROLLER_VERSION}' does not match control.json's spec.docker.imageTag = '${ARC_DATA_CONTROLLER_VERSION_CONTROL_JSON}', something went wrong in the release or you applied an incorrect manifest for this release."
   exit 1
 fi
-
-echo ""
-echo "INFO | Onboarding to Bootstrapper version: ${ARC_DATA_EXT_VERSION}"
-echo "INFO | Onboarding to Data Controller version: ${ARC_DATA_CONTROLLER_VERSION}"
-echo ""
 
 # K8s Configmap variables
 if [[ -z "${DELETE_FLAG}" ]]; then
@@ -429,17 +438,8 @@ fi
 # ==========================================
 if [ "${OPENSHIFT}" = 'true' ]; then
   echo "INFO | Applying OpenShift pre-reqs"
-  # Create namespace if not exists via apply
-  kubectl create namespace "${ARC_DATA_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
-
-  # Add annotations for Arc Data Container UID and GID and overwrite the random one OpenShift generates
-  # https://cookbook.openshift.org/users-and-role-based-access-control/why-do-my-applications-run-as-a-random-user-id.html
-  # https://docs.microsoft.com/en-us/azure/azure-arc/data/create-data-controller-using-kubernetes-native-tools#create-a-namespace-in-which-the-data-controller-will-be-created
-  kubectl annotate namespace "${ARC_DATA_NAMESPACE}" openshift.io/sa.scc.supplemental-groups="1000700001/10000" --overwrite
-  kubectl annotate namespace "${ARC_DATA_NAMESPACE}" openshift.io/sa.scc.uid-range="1000700001/10000" --overwrite
-
-  # Create resources at namespace scope - cluster scoped resources will be created outside namespace automatically
-  kubectl apply -n "${ARC_DATA_NAMESPACE}" -f './openshift/arc-data-scc.yaml'
+  # Create SCCs that are still required at this time
+  kubectl apply -f './openshift/arc-data-scc.yaml'
 fi
 
 # =========================================
@@ -512,11 +512,8 @@ else
                             --cluster-type connectedClusters \
                             --cluster-name "${CONNECTED_CLUSTER}" \
                             --resource-group "${CONNECTED_CLUSTER_RESOURCE_GROUP}" \
-                            --auto-upgrade "${ARC_DATA_EXT_AUTO_UPGRADE}" \
                             --scope cluster \
                             --release-namespace "${ARC_DATA_NAMESPACE}" \
-                            --config Microsoft.CustomLocation.ServiceAccount=sa-arc-bootstrapper \
-                            --config systemDefaultValues.imagePullPolicy="Always" \
                             "${bootstrapper_version_param[@]}" \
                             ${VERBOSE:+--debug --verbose}
     

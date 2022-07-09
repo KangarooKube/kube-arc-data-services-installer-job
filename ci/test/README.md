@@ -54,18 +54,18 @@ rm -rf ${MODULE_PATH}/terraform.tfstate.backup
 
 # 1. Deploy fully one-time, skip destruction
 SKIP_teardown_aks=true \
-go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
+go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v -args -releaseTrain=preview 2>&1 | tee test.log
 # ...
 
 # 2. Iterate on validation - tweak stages to skip as we go
 SKIP_teardown_aks=true \
 SKIP_deploy_aks=true \
-go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
+go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v -args -releaseTrain=preview 2>&1 | tee test.log
 # ...
 
 # 3. Destroy when done development
 SKIP_deploy_aks=true \
-go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v
+go test -timeout 300m -run 'TestAksIntegrationWithStages' -tags "integration aks" -v -args -releaseTrain=preview 2>&1 | tee test.log
 
 # All options available
 

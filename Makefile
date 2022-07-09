@@ -29,11 +29,33 @@ clean-dos2unix:
 	$(AT)echo ""
 	$(AT)find -name "*.sh" -type f -print0 | xargs -0 -n 1 -P 4 dos2unix
 
-create-new-release:
+create-new-release-env:
 	$(AT)echo ""
 	$(AT)echo " Creating new release.env file "
 	$(AT)echo ""
 	$(AT)make -C release create-new-release
+
+create-new-release-image: create-new-release-env
+	$(AT)echo ""
+	$(AT)echo " Building docker images for ghcr.io based on release.env "
+	$(AT)echo ""
+
+push-release: create-new-release-image
+	$(AT)echo ""
+	$(AT)echo " Pushing Docker images to ghcr.io "
+	$(AT)echo ""
+
+clean-local-terraform-state:
+	$(AT)echo ""
+	$(AT)echo " Cleaning up State files from Terraform CI run "
+	$(AT)echo ""
+	$(AT)make -C ci/test clean-local-terraform-state
+
+run-tests:
+	$(AT)echo ""
+	$(AT)echo " Running unit and integration tests across all release trains "
+	$(AT)echo ""
+	$(AT)make -C ci/test test
 
 # Platform specific variables
 #
@@ -45,7 +67,10 @@ ROOT_DIR := $(realpath $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 help:
 	@echo ""
 	@echo "Release: "
-	@echo "   make create-new-release                  - Interactive prompts for create a new release.env file."
+	@echo "   make create-new-release-env              - Interactive prompts for create a new release.env file."
+	@echo "   make create-new-release-image            - Creates a new tagged docker image for relevant release train."
+	@echo "   make push-release                        - Builds image and publishes to ghcr.io."
 	@echo "   make clean-dos2unix                      - Before running a release, runs dos2unix to clean up in case of CRLF related pains."
+	@echo "   make clean-local-terraform-state         - Clean up State files from local Terraform runs."
 	@echo "   make help                                - This help text."
 	@echo ""

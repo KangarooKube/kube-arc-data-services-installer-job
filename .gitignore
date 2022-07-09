@@ -91,3 +91,6 @@ kubeconfig
 # Go
 *__debug_bin
 *.log
+
+# Kustomize
+kustomize/base/kustomization.yaml
