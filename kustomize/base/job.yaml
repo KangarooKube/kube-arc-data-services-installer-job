@@ -97,12 +97,6 @@ spec:
             configMapKeyRef:
               name: config-envs
               key: ARC_DATA_EXT
-        - name: ARC_DATA_EXT_AUTO_UPGRADE
-          valueFrom: 
-            configMapKeyRef:
-              name: config-envs
-              key: ARC_DATA_EXT_AUTO_UPGRADE
-              optional: true
         - name: ARC_DATA_NAMESPACE
           valueFrom: 
             configMapKeyRef:

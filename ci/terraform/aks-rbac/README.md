@@ -82,15 +82,7 @@ source /workspaces/kube-arc-data-services-installer-job/release/release.env
 # Build via env variables
 docker build -t $acrName.azurecr.io/$containerName:$containerVersion \
     --build-arg HELM_VERSION=${HELM_VERSION} \
-    --build-arg KUBECTL_VERSION=${KUBECTL_VERSION} \
-    --build-arg AZCLI_VERSION=${AZCLI_VERSION} \
-    --build-arg EXT_K8S_CONFIGURATION_VERSION=${EXT_K8S_CONFIGURATION_VERSION} \
-    --build-arg EXT_ARCDATA_VERSION=${EXT_ARCDATA_VERSION} \
-    --build-arg EXT_K8S_EXTENSION_VERSION=${EXT_K8S_EXTENSION_VERSION} \
-    --build-arg EXT_K8S_CONNECTEDK8S_VERSION=${EXT_K8S_CONNECTEDK8S_VERSION} \
-    --build-arg EXT_K8S_CUSTOMLOCATION_VERSION=${EXT_K8S_CUSTOMLOCATION_VERSION} \
-    --build-arg ARC_DATA_EXT_VERSION=${ARC_DATA_EXT_VERSION} \
-    --build-arg ARC_DATA_CONTROLLER_VERSION=${ARC_DATA_CONTROLLER_VERSION} \
+    ...
     .
 
 # Push to ACR

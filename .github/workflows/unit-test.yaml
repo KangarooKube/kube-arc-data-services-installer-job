@@ -51,52 +51,19 @@ jobs:
           SPN_TENANT_ID: ${{ secrets.SPN_TENANT_ID }}
         run: make unit-test
 
-      - name: Generate Test Summary
-        uses: test-summary/action@v1
+      - uses: actions/upload-artifact@v2
         with:
-          paths: |
-                        ci/test/unit-test-report.xml
-        if: always()
+          name: unit-test-result
+          path: ci/test/unit-test-*
 
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        id: test-results
-        if: always()
-        with:
-          files: "ci/test/unit-test-report.xml"
-          check_name: Unit Test Results
-          comment_title: "Unit Test Results"
-          comment_mode: always
-
-      - name: Set badge color
-        shell: bash
-        run: |
-          case ${{ fromJSON( steps.test-results.outputs.json ).conclusion }} in
-            success)
-              echo "BADGE_COLOR=31c653" >> $GITHUB_ENV
-              ;;
-            failure)
-              echo "BADGE_COLOR=800000" >> $GITHUB_ENV
-              ;;
-            neutral)
-              echo "BADGE_COLOR=696969" >> $GITHUB_ENV
-              ;;
-          esac
-
-      - name: Create badge
-        uses: emibcn/badge-action@d6f51ff11b5c3382b3b88689ae2d6db22d9737d1
-        with:
-          label: Unit Tests
-          status: '${{ fromJSON( steps.test-results.outputs.json ).formatted.stats.tests }} tests, ${{ fromJSON( steps.test-results.outputs.json ).formatted.stats.runs }} runs: ${{ fromJSON( steps.test-results.outputs.json ).conclusion }}'
-          color: ${{ env.BADGE_COLOR }}
-          path: unit-test-badge.svg
-
-      - name: Upload badge to Gist
-        # Upload only for master branch
-        if: >
-          github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.event.workflow_run.head_branch == 'master' || github.event.workflow_run.head_branch == 'main'
-        uses: andymckay/append-gist-action@1fbfbbce708a39bd45846f0955ed5521f2099c6d
-        with:
-          token: ${{ secrets.GIST_TOKEN }}
-          gistURL: https://gist.githubusercontent.com/mdrakiburrahman/3f7efaed392e80ea103bb77441e0aa4a
-          file: unit-test-badge.svg
+  publish-badge:
+    name: Publish badge from run
+    needs: go-tests
+    uses: ./.github/workflows/publish-badge.yaml
+    with:
+      run_artifact: unit-test-result
+      xml_file_path: unit-test-report.xml
+      badge_file_name: unit-test-badge.svg
+      check_name: Unit Test Results
+    secrets:
+      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}

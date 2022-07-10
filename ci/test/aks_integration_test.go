@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,7 +37,10 @@ var (
 	// Initiate with root TF directory
 	// Local run - will remain as aksTfModuleDir
 	// CI run - will get overwritten with temp folder from test_structure.CopyTerraformFolderToTemp for the duration of the run
-	testFolder = aksTfModuleDir
+	testFolder   = aksTfModuleDir
+
+	// Command line variable - e.g. -args -releaseTrain=preview
+	releaseTrain = flag.String("releaseTrain", "", "Arc Data Services Release train - test, preview, stable")
 )
 
 // Test run that has skippable stages built in
@@ -71,6 +75,9 @@ func TestAksIntegrationWithStages(t *testing.T) {
 
 	test_structure.RunTestStage(t, "build_and_push_image", func() {
 		aksTfOpts := test_structure.LoadTerraformOptions(t, testFolder)
+
+		releaseEnvFileName := "release." + (*releaseTrain) + ".env"
+		releaseEnvFilePath := filepath.Join(releaseEnvFolder, releaseEnvFileName)
 		buildArgs := createBuildArgFromFile(t, aksTfOpts, releaseEnvFilePath)
 
 		logger.Log(t, "Building image...")

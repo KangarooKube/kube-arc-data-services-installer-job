@@ -14,7 +14,7 @@ RUN apt-get update && apt-get upgrade -y && \
     AZ_REPO=$(lsb_release -cs) && \
     echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install kubectl helm azure-cli jq nano -y 
+    apt-get install kubectl helm azure-cli jq nano -y
 
 COPY ./src/scripts/get-latest-versions.sh /root/get-latest-versions.sh
 
@@ -25,9 +25,6 @@ ENV HOME=/root
 RUN az extension add --name connectedk8s && \
     az extension add --name k8s-extension && \
     az extension add --name k8s-configuration && \
-    az extension add --name customlocation && \
-    az extension add --name arcdata
-
-#ENTRYPOINT ["sleep", "infinity"]
+    az extension add --name customlocation
 
 ENTRYPOINT ["/bin/bash", "./get-latest-versions.sh"]

@@ -2,32 +2,39 @@ FROM --platform=amd64 ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Set build time variables
+# Base artifacts
 ARG HELM_VERSION
 ARG KUBECTL_VERSION
 ARG AZCLI_VERSION
 ARG EXT_K8S_CONFIGURATION_VERSION
-ARG EXT_ARCDATA_VERSION
 ARG EXT_K8S_EXTENSION_VERSION
 ARG EXT_K8S_CONNECTEDK8S_VERSION
 ARG EXT_K8S_CUSTOMLOCATION_VERSION
-# Set runtime defaults
+
+# Arc Data artifacts
+ARG ARC_DATA_RELEASE_TRAIN
 ARG ARC_DATA_EXT_VERSION
 ARG ARC_DATA_CONTROLLER_VERSION
+ARG ARC_DATA_WHL_URL
+
+# Set container runtime versions - these should be treated as immutable in the Job due to version dependencies
+ENV ARC_DATA_RELEASE_TRAIN=$ARC_DATA_RELEASE_TRAIN
 ENV ARC_DATA_EXT_VERSION=$ARC_DATA_EXT_VERSION
 ENV ARC_DATA_CONTROLLER_VERSION=$ARC_DATA_CONTROLLER_VERSION
+ENV ARC_DATA_WHL_URL=$ARC_DATA_WHL_URL
 
 # Validate
 RUN echo "HELM_VERSION: ${HELM_VERSION}\n" \
  && echo "KUBECTL_VERSION: ${KUBECTL_VERSION}\n" \
  && echo "AZCLI_VERSION: ${AZCLI_VERSION}\n" \
  && echo "EXT_K8S_CONFIGURATION_VERSION: ${EXT_K8S_CONFIGURATION_VERSION}\n" \
- && echo "EXT_ARCDATA_VERSION: ${EXT_ARCDATA_VERSION}\n" \
  && echo "EXT_K8S_EXTENSION_VERSION: ${EXT_K8S_EXTENSION_VERSION}\n" \
  && echo "EXT_K8S_CONNECTEDK8S_VERSION: ${EXT_K8S_CONNECTEDK8S_VERSION}\n" \
  && echo "EXT_K8S_CUSTOMLOCATION_VERSION: ${EXT_K8S_CUSTOMLOCATION_VERSION}\n" \
+ && echo "ARC_DATA_RELEASE_TRAIN: ${ARC_DATA_RELEASE_TRAIN}\n" \
  && echo "ARC_DATA_EXT_VERSION: ${ARC_DATA_EXT_VERSION}\n" \
- && echo "ARC_DATA_CONTROLLER_VERSION: ${ARC_DATA_CONTROLLER_VERSION}\n"
+ && echo "ARC_DATA_CONTROLLER_VERSION: ${ARC_DATA_CONTROLLER_VERSION}\n" \
+ && echo "ARC_DATA_WHL_URL: ${ARC_DATA_WHL_URL}\n"
 
 USER root
 
@@ -61,7 +68,9 @@ ENV HOME=/home/container-user
 RUN az extension add --name connectedk8s --version ${EXT_K8S_CONNECTEDK8S_VERSION} && \
     az extension add --name k8s-extension --version ${EXT_K8S_EXTENSION_VERSION} && \
     az extension add --name k8s-configuration --version ${EXT_K8S_CONFIGURATION_VERSION} && \
-    az extension add --name customlocation --version ${EXT_K8S_CUSTOMLOCATION_VERSION} && \
-    az extension add --name arcdata --version ${EXT_ARCDATA_VERSION}
+    az extension add --name customlocation --version ${EXT_K8S_CUSTOMLOCATION_VERSION}
+
+# To avoid ambiguity between release trains, for arcdata we use the direct wheel file co-ordinates
+RUN az extension add --source ${ARC_DATA_WHL_URL} -y
 
 ENTRYPOINT ["/bin/bash", "./install-arc-data-services.sh"]
