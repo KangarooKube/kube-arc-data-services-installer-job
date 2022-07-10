@@ -15,6 +15,11 @@ on:
     - "src/**"
     - ".github/workflows/integration-test.yaml"
 
+# Limit concurrent runs
+concurrency:
+  group: ${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
 # Replace these to modify Job parameters
 env:
   SPN_CLIENT_ID: ${{ secrets.SPN_CLIENT_ID }}
@@ -66,9 +71,9 @@ jobs:
         working-directory: ci/test
         run: go mod download
 
-      - name: Run Integration tests for all release trains in parallel - preview, stable - in parallel
+      - name: Run Integration tests for all release trains in parallel - preview, stable
         working-directory: ci/test
-        run: make -j integration-test
+        run: make -j integration-test-aks
 
       - uses: actions/upload-artifact@v2
         with:
