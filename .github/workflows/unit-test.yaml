@@ -64,6 +64,6 @@ jobs:
       run_artifact: unit-test-result
       xml_file_path: unit-test-report.xml
       badge_file_name: unit-test-badge.svg
-      check_name: Unit Test Results
+      check_name: Unit Test
     secrets:
       GIST_TOKEN: ${{ secrets.GIST_TOKEN }}

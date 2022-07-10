@@ -83,7 +83,7 @@ jobs:
       run_artifact: integration-test-result-all
       xml_file_path: integration-test-report-preview.xml
       badge_file_name: integration-test-report-preview-badge.svg
-      check_name: Integration Test Results - Preview
+      check_name: Integration Test - Preview
     secrets:
       GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
 
@@ -95,6 +95,6 @@ jobs:
       run_artifact: integration-test-result-all
       xml_file_path: integration-test-report-stable.xml
       badge_file_name: integration-test-report-stable-badge.svg
-      check_name: Integration Test Results - Stable
+      check_name: Integration Test - Stable
     secrets:
       GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
