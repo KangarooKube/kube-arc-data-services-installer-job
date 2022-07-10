@@ -29,22 +29,36 @@ clean-dos2unix:
 	$(AT)echo ""
 	$(AT)find -name "*.sh" -type f -print0 | xargs -0 -n 1 -P 4 dos2unix
 
+clean-permissions:
+	$(AT)echo ""
+	$(AT)echo " Changing permissions on all files "
+	$(AT)echo ""
+	$(AT)chmod -R 777 .
+
 create-new-release-env:
 	$(AT)echo ""
 	$(AT)echo " Creating new release.env file "
 	$(AT)echo ""
 	$(AT)make -C release create-new-release
 
-create-new-release-image: create-new-release-env
-	$(AT)echo ""
-	$(AT)echo " Building docker images for ghcr.io based on release.env "
-	$(AT)echo ""
+push-new-release-image: push-preview push-stable
+push-preview:
+	$(AT)$(DOCKER_PUSH) --no-cache \
+						'kube-arc-data-services-installer-job' \
+						'ghcr.io/kangarookube' \
+						$(ROOT_DIR) \
+						$(RELEASE_ROOT)/release.preview.env \
+						preview \
+						${CR_PAT}
 
-push-release: create-new-release-image
-	$(AT)echo ""
-	$(AT)echo " Pushing Docker images to ghcr.io "
-	$(AT)echo ""
-
+push-stable:
+	$(AT)$(DOCKER_PUSH) --no-cache \
+						'kube-arc-data-services-installer-job' \
+						'ghcr.io/kangarookube' \
+						$(ROOT_DIR) \
+						$(RELEASE_ROOT)/release.stable.env \
+						stable \
+						${CR_PAT}
 clean-local-terraform-state:
 	$(AT)echo ""
 	$(AT)echo " Cleaning up State files from Terraform CI run "
@@ -71,9 +85,11 @@ run-tests:
 # Platform specific variables
 #
 SHELL                := /bin/bash
-ROOT_DIR             := $(realpath $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/..)
+ROOT_DIR             := $(shell git rev-parse --show-toplevel)
 TEST_ROOT             = $(shell git rev-parse --show-toplevel)/ci/test
 KUSTOMIZE_ROOT        = $(shell git rev-parse --show-toplevel)/kustomize
+RELEASE_ROOT          = $(shell git rev-parse --show-toplevel)/release
+DOCKER_PUSH          := $(shell git rev-parse --show-toplevel)/release/build/docker-push.sh
 
 # Print help information to the console.
 #
@@ -81,11 +97,11 @@ help:
 	@echo ""
 	@echo "Release: "
 	@echo "   make create-new-release-env              - Interactive prompts for create a new release.env file."
-	@echo "   make create-new-release-image            - Creates a new tagged docker image for relevant release train."
-	@echo "   make push-release                        - Builds image and publishes to ghcr.io."
+	@echo "   make push-new-release-image              - Build + Push new tagged docker images for relevant release train to ghcr.io."
 	@echo "   make clean-dos2unix                      - Before running a release, runs dos2unix to clean up in case of CRLF related pains."
 	@echo "   make run-tests                           - Run all tests - unit, integration, for all trains - preview, stable."
 	@echo "   make clean-local-terraform-state         - Clean up State files from local CI runs."
 	@echo "   make clean-local-test-files              - Clean up log files, JUnit results etc from local CI runs."
+	@echo "   make clean-permissions                   - Update permissions on all files in this repo."
 	@echo "   make help                                - This help text."
 	@echo ""

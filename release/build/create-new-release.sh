@@ -50,7 +50,7 @@ if [[ -z "${ARC_DATA_WHL_URL}" ]]; then
 fi
 
 # output release details
-echo -e "\nProducing release.env file:"
+echo -e "\nProducing release.${ARC_DATA_RELEASE_TRAIN}.env file:"
 echo "# Base artifacts:" > ../release.${ARC_DATA_RELEASE_TRAIN}.env
 echo "HELM_VERSION=${HELM_VERSION}" >> ../release.${ARC_DATA_RELEASE_TRAIN}.env
 echo "KUBECTL_VERSION=${KUBECTL_VERSION}" >> ../release.${ARC_DATA_RELEASE_TRAIN}.env
