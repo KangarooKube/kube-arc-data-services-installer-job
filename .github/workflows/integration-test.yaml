@@ -71,7 +71,7 @@ jobs:
         working-directory: ci/test
         run: go mod download
 
-      - name: Run Integration tests for all release trains in parallel - preview, stable - in parallel
+      - name: Run Integration tests for all release trains in parallel - preview, stable
         working-directory: ci/test
         run: make -j integration-test-aks
 
