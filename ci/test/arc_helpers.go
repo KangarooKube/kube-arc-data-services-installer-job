@@ -43,15 +43,14 @@ func createBuildArgFromFile(t *testing.T, aksTfOpts *terraform.Options, releaseE
 // export AZDATA_USERNAME='boor'                                 # boor
 // export AZDATA_PASSWORD='acntorPRESTO!'                        # acntorPRESTO!
 // export CONNECTED_CLUSTER_RESOURCE_GROUP="$resourceGroup-arc"  # Append "arc" to existing RG's name
-// export CONNECTED_CLUSTER_LOCATION="eastasia"                  # If set use, if not, set to eastasia
+// export CONNECTED_CLUSTER_LOCATION="eastus"                    # If set use, if not, set to eastus
 // export ARC_DATA_RESOURCE_GROUP="$resourceGroup-arc-data"      # Append "arc-data" to  existing RG's name
-// export ARC_DATA_LOCATION="eastasia"                           # If set use, if not, set to eastasia
+// export ARC_DATA_LOCATION="eastus"                             # If set use, if not, set to eastus
 // export CONNECTED_CLUSTER=$clusterName                         # Use name of AKS Cluster created by Terraform
 // export ARC_DATA_EXT="arc-data-bootstrapper"                   # arc-data-bootstrapper
-// export ARC_DATA_EXT_AUTO_UPGRADE="false"                      # false - because bootstrapper version is explicitly set
 // export ARC_DATA_NAMESPACE="azure-arc-data"                    # azure-arc-data
 // export ARC_DATA_CONTROLLER="azure-arc-data-controller"        # azure-arc-data-controller
-// export ARC_DATA_CONTROLLER_LOCATION="southeastasia"           # If set use, if not, set to southeastasia
+// export ARC_DATA_CONTROLLER_LOCATION="eastus"                  # If set use, if not, set to eastus
 // export DELETE_FLAG='false'                                    # Starts false - will be overwritten to true during test
 
 func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
@@ -70,18 +69,17 @@ func setArcJobVariables(t *testing.T, aksTfOpts *terraform.Options) {
 
 	// Set reasonable defaults if not set
 	if os.Getenv("CONNECTED_CLUSTER_LOCATION") == "" {
-		os.Setenv("CONNECTED_CLUSTER_LOCATION", "eastasia")
+		os.Setenv("CONNECTED_CLUSTER_LOCATION", "eastus")
 	}
 	if os.Getenv("ARC_DATA_LOCATION") == "" {
-		os.Setenv("ARC_DATA_LOCATION", "eastasia")
+		os.Setenv("ARC_DATA_LOCATION", "eastus")
 	}
 	// Opinionated defaults for test harness
 	os.Setenv("ARC_DATA_EXT", "arc-data-bootstrapper")
-	os.Setenv("ARC_DATA_EXT_AUTO_UPGRADE", "false")
 	os.Setenv("ARC_DATA_NAMESPACE", "azure-arc-data")
 	os.Setenv("ARC_DATA_CONTROLLER", "azure-arc-data-controller")
 	if os.Getenv("ARC_DATA_CONTROLLER_LOCATION") == "" {
-		os.Setenv("ARC_DATA_CONTROLLER_LOCATION", "southeastasia")
+		os.Setenv("ARC_DATA_CONTROLLER_LOCATION", "eastus")
 	}
 	os.Setenv("DELETE_FLAG", "false")
 }

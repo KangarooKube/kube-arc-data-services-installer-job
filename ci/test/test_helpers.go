@@ -26,7 +26,7 @@ const (
 	containerName           = "kube-arc-data-services-installer-job"
 	containerVersion        = "0.1.0" // Pass this in as an env variable with the Git commit hash instead
 	dockerFilePath          = "../../"
-	releaseEnvFilePath      = "../../release/release.env"
+	releaseEnvFolder        = "../../release"
 	namePrefix              = "arcCIAksTf"
 	deploymentLocation      = "canadacentral"
 	jobNamespace            = "azure-arc-kubernetes-bootstrap"
@@ -40,25 +40,25 @@ const (
 //
 // 1. Include hostname in ID - which would allow ust to run the command below in an idempotent fashion
 //
-//	Pros:
-//		- Can run Unit test over and over without cleaning remote state file
-//  Cons:
-//		- Can only run one integration test run on a given machine at a time since State file will conflict
-// 		- Resouce names will include uniqueID anyway so Terraform will try to recreate resources - meaning this idempotent approach is useless for Integration Tests to start
+// Pros:
+//      - Can run Unit test over and over without cleaning remote state file
+// Cons:
+//      - Can only run one integration test run on a given machine at a time since State file will conflict
+//      - Resouce names will include uniqueID anyway so Terraform will try to recreate resources - meaning this idempotent approach is useless for Integration Tests to start
 //
-// 	Sample implementation
-// 		hostname, err := os.Hostname()
-//		require.NoError(t, err)
-//		storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), hostname)
+// Sample implementation
+//      hostname, err := os.Hostname()
+//      require.NoError(t, err)
+//      storageAccountStateKey := fmt.Sprintf("%s/%s/terraform.tfstate", t.Name(), hostname)
 //
 // 2. Include unique ID - which means the command below can only be run once per machine without state file conflict
 //
-//  Pros:
-// 		- Can run multiple Integration tests at once on a given machine
+// Pros:
+//      - Can run multiple Integration tests at once on a given machine
 //      - For local dev, terratest include stage skips which would circumvent this anyway
-//		- Unit tests can just run over and over and generate unique state file, who cares, there's no ARM resources
+//      - Unit tests can just run over and over and generate unique state file, who cares, there's no ARM resources
 //  Cons:
-//		- Each run of the Unit test needs to clean up the remote state file
+//      - Each run of the Unit test needs to clean up the remote state file
 //
 // Implemented Option 2 - as there are way more benefits - as long as we Skip the redeploy stage locally we're set
 func createaksTfOpts(t *testing.T, terraformDir string) *terraform.Options {
