@@ -37,10 +37,6 @@ if [[ -z "${ARC_DATA_RELEASE_TRAIN}" ]]; then
     read -p '1. Input ARC_DATA_RELEASE_TRAIN            | e.g. "test, preview or stable": ' ARC_DATA_RELEASE_TRAIN
 fi
 
-if [[ -z "${RELEASE_VERSION}" ]]; then
-    read -p 'Input RELEASE_VERSION: ' RELEASE_VERSION
-fi
-
 if [[ -z "${ARC_DATA_EXT_VERSION}" ]]; then
     read -p '2. Input ARC_DATA_EXT_VERSION              | e.g. "1.2.19831003"): ' ARC_DATA_EXT_VERSION
 fi
