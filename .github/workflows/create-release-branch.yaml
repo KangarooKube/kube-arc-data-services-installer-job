@@ -21,8 +21,8 @@ on:
         - test
 
 env:
-  RELEASE_NAME: ${{ github.event.inputs.arcDataControllerImageTag }}_${{ github.event.inputs.arcDataServicesReleaseTrain }}
-  ARC_DATA_CONTROLLER_VERSION: ${{ github.event.inputs.arcDataControllerImageTag }}
+  RELEASE_NAME: ${{ github.event.inputs.arcDataServicesImageTag }}_${{ github.event.inputs.arcDataServicesReleaseTrain }}
+  ARC_DATA_CONTROLLER_VERSION: ${{ github.event.inputs.arcDataServicesImageTag }}
   ARC_DATA_EXT_VERSION: ${{ github.event.inputs.arcDataServicesExtVersion }}
   ARC_DATA_WHL_URL: ${{ github.event.inputs.azArcDataExtURL }}
   ARC_DATA_RELEASE_TRAIN: ${{ github.event.inputs.arcDataServicesReleaseTrain }}
@@ -44,11 +44,11 @@ jobs:
       run: git checkout -b release/$RELEASE_NAME
     - name: Create Release File
       working-directory: release
-      run: make -j create-new-release
+      run: make create-new-release
     - name: Update Changelog
       uses: thomaseizinger/keep-a-changelog-new-release@v1
       with:
-        version: ${{ github.event.inputs.arcDataControllerImageTag }}
+        version: ${{ github.event.inputs.arcDataServicesImageTag }}
         tag: ${{ github.event.inputs.arcDataServicesReleaseTrain }}
     - name: Initialize Git Config
       run: |
