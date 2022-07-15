@@ -2,24 +2,31 @@ name: Create Release Branch
 on:
   workflow_dispatch:
     inputs:
-      releaseVersion:
-        description: 'Release version (ie 1.8.0) - Major and Minor should match ARC DS image tag'
-        required: true
-      arcDataControllerImageTag:
-        description: 'ImageTag for '
+      arcDataServicesImageTag:
+        description: 'ImageTag for Data Services'
         required: true
       arcDataServicesExtVersion:
-        description: 'imageTag for '
+        description: 'ARC for Kubernetes Data Service extension version'
         required: true
-      azArcDataExtVersion:
-        description: 'Input if latest az cli arcdata exet '
-        required: false
+      azArcDataExtURL:
+        description: 'Input URL for arcdata az cli wheel file download'
+        required: true
+      arcDataServicesReleaseTrain:
+        description: 'Release for Data Services'
+        type: choice
+        required: true
+        options:
+        - stable
+        - preview
+        - test
 
 env:
-  RELEASE_VERSION: ${{ github.event.inputs.releaseVersion }}
+  RELEASE_NAME: ${{ github.event.inputs.arcDataControllerImageTag }}_${{ github.event.inputs.arcDataServicesReleaseTrain }}
   ARC_DATA_CONTROLLER_VERSION: ${{ github.event.inputs.arcDataControllerImageTag }}
   ARC_DATA_EXT_VERSION: ${{ github.event.inputs.arcDataServicesExtVersion }}
-  DESIRED_EXT_ARCDATA_VERSION: ${{ github.event.inputs.azArcDataExtVersion }}
+  ARC_DATA_WHL_URL: ${{ github.event.inputs.azArcDataExtURL }}
+  ARC_DATA_RELEASE_TRAIN: ${{ github.event.inputs.arcDataServicesReleaseTrain }}
+  RELEASE_FILENAME: 'release.${{ github.event.inputs.arcDataServicesReleaseTrain }}.env'
   IS_WORKFLOW: true
 
 jobs:
@@ -33,26 +40,26 @@ jobs:
       uses: docker-practice/actions-setup-docker@master
     - name: Validate Docker install
       run: docker version
-    - name: Create release branch
-      run: git checkout -b release/${{ github.event.inputs.releaseVersion }}
+    - name: Create Release Branch
+      run: git checkout -b release/$RELEASE_NAME
+    - name: Create Release File
+      working-directory: release
+      run: make -j create-new-release
+    - name: Update Changelog
+      uses: thomaseizinger/keep-a-changelog-new-release@v1
+      with:
+        version: ${{ github.event.inputs.arcDataControllerImageTag }}
+        tag: ${{ github.event.inputs.arcDataServicesReleaseTrain }}
     - name: Initialize Git Config
       run: |
        git config user.name "GitHub Actions"
        git config user.email noreply@github.com
-    - name: Update Changelog
-      uses: thomaseizinger/keep-a-changelog-new-release@v1
-      with:
-        version: ${{ github.event.inputs.releaseVersion }}
-        tag: ${{ github.event.inputs.releaseVersion }}
-
-
-    - name: Commit changelog and manifest files
-      id: make-commit
+    - name: Commit Changelog and Manifest Files
       run: |
-        git add release/release.env
+        git add release/$RELEASE_FILENAME
         git add CHANGELOG.md
-        git commit --message "Prepare release ${{ github.event.inputs.releaseVersion }}"
+        git commit --message "Prepare release $ARC_DATA_CONTROLLER_VERSION of train $ARC_DATA_RELEASE_TRAIN"
         echo "::set-output name=commit::$(git rev-parse HEAD)"
-    - name: Push new branch
-      run: git push origin release/${{ github.event.inputs.releaseVersion }}
+    - name: Push New Branch
+      run: git push origin release/$RELEASE_NAME
     
