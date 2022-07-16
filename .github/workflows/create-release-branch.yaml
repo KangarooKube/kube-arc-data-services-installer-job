@@ -45,11 +45,6 @@ jobs:
     - name: Create Release File
       working-directory: release
       run: make create-new-release
-    - name: Update Changelog
-      uses: thomaseizinger/keep-a-changelog-new-release@v1
-      with:
-        version: ${{ github.event.inputs.arcDataServicesImageTag }}
-        tag: ${{ github.event.inputs.arcDataServicesReleaseTrain }}
     - name: Initialize Git Config
       run: |
        git config user.name "GitHub Actions"
@@ -57,7 +52,6 @@ jobs:
     - name: Commit Changelog and Manifest Files
       run: |
         git add release/$RELEASE_FILENAME
-        git add CHANGELOG.md
         git commit --message "Prepare release $ARC_DATA_CONTROLLER_VERSION of train $ARC_DATA_RELEASE_TRAIN"
         echo "::set-output name=commit::$(git rev-parse HEAD)"
     - name: Push New Branch
