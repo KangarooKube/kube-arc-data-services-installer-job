@@ -5,8 +5,6 @@ on:
     - cron: '45 0 * * *'
   push:
     branches: [ "test-nightly-build" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]
 
@@ -20,16 +18,16 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    #permissions:
-      #contents: read
-      #packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      #id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      # Pull build args for stable build
+      - name: Build ARGs from stable release file
+        run: |
+          export BUILD_ARGS=$(grep -v '^#' release/release.stable.env | xargs | sed 's/ /,/g')
+          echo BUILD_ARGS=$BUILD_ARGS >> $GITHUB_ENV
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
@@ -53,8 +51,8 @@ jobs:
       - name: Build local container
         uses: docker/build-push-action@v3
         with:
-          tags: ${{ steps.meta.outputs.tags }}-scan
-          build-args: ""
+          tags: stable-scan
+          build-args: ${{ env.BUILD_ARGS }}
           push: false
           load: true
       
@@ -63,7 +61,7 @@ jobs:
         id: scan-image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ steps.meta.outputs.tags }}-scan'
+          image-ref: 'stable-scan'
           exit-code: '1'
           ignore-unfixed: false
           vuln-type: 'os,library'
@@ -78,13 +76,13 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
         
-      # Build and push Docker image with Buildx (don't push on PR)
+      # Build and push Docker image with Buildx (don't push on push)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v3
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          push: ${{ github.event_name != 'push' }} # 'pull_request'
+          tags: stable,latest
           labels: ${{ steps.meta.outputs.labels }}
