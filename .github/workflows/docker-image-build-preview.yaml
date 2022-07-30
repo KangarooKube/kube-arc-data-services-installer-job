@@ -1,4 +1,4 @@
-name: Nightly Docker Image Publish - Preview
+name: Docker Image Build - Preview
 
 on:
   schedule:

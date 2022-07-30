@@ -1,4 +1,4 @@
-name: Nightly Docker Image Publish - Stable
+name: Docker Image Build - Stable
 
 on:
   schedule:
