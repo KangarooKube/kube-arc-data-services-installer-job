@@ -29,10 +29,10 @@ jobs:
         with:
           env-file: release/release.stable.env
 
-      # Login against a Docker registry except on push
+      # Login against a Docker registry except on push and PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'push'
+        if: ${{ github.event_name != 'pull_request' && github.event.action != 'push' }}
         uses: docker/login-action@v2.0.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -91,9 +91,8 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
         
-      # Build image for push
+      # Build image and push for non-push and PR
       - name: Build Docker and push container
-        if: github.event_name != 'push'
         uses: docker/build-push-action@v3
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -110,5 +109,4 @@ jobs:
             ARC_DATA_EXT_VERSION=${{ env.ARC_DATA_EXT_VERSION }}
             ARC_DATA_CONTROLLER_VERSION=${{ env.ARC_DATA_CONTROLLER_VERSION }}
             ARC_DATA_WHL_URL=${{ env.ARC_DATA_WHL_URL }}
-          push: true
-          load: true
+          push: ${{ github.event_name != 'pull_request' && github.event.action != 'push' }}
