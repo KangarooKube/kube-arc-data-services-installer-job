@@ -1,8 +1,8 @@
-name: Nightly Docker Image Publish - Stable
+name: Nightly Docker Image Publish - Preview
 
 on:
   schedule:
-    - cron: '45 0 * * *'
+    - cron: '5 0 * * *'
   push:
     branches: [ "test-nightly-build" ]
   pull_request:
@@ -23,11 +23,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Pull build args for stable build
+      # Pull build args for preview build
       - name: Build ARGs from stable release file
         uses: c-py/action-dotenv-to-setenv@v2
         with:
-          env-file: release/release.stable.env
+          env-file: release/release.preview.env
 
       # Login against a Docker registry except on push
       # https://github.com/docker/login-action
@@ -47,52 +47,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ env.ARC_DATA_CONTROLLER_VERSION }}_${{ env.ARC_DATA_RELEASE_TRAIN }}
-
-      # Build image for scanning local
-      - name: Build Docker container
-        uses: docker/build-push-action@v3
-        with:
-          tags: stable-scan
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            HELM_VERSION=${{ env.HELM_VERSION }} 
-            KUBECTL_VERSION=${{ env.KUBECTL_VERSION }} 
-            AZCLI_VERSION=${{ env.AZCLI_VERSION }}
-            EXT_K8S_CONFIGURATION_VERSION=${{ env.EXT_K8S_CONFIGURATION_VERSION }}
-            EXT_K8S_EXTENSION_VERSION=${{ env.EXT_K8S_EXTENSION_VERSION }}
-            EXT_K8S_CONNECTEDK8S_VERSION=${{ env.EXT_K8S_CONNECTEDK8S_VERSION }}
-            EXT_K8S_CUSTOMLOCATION_VERSION=${{ env.EXT_K8S_CUSTOMLOCATION_VERSION }}
-            ARC_DATA_RELEASE_TRAIN=${{ env.ARC_DATA_RELEASE_TRAIN }}
-            ARC_DATA_EXT_VERSION=${{ env.ARC_DATA_EXT_VERSION }}
-            ARC_DATA_CONTROLLER_VERSION=${{ env.ARC_DATA_CONTROLLER_VERSION }}
-            ARC_DATA_WHL_URL=${{ env.ARC_DATA_WHL_URL }}
-          push: ${{ github.event_name != 'push' }}
-          load: true
-      
-      # Local scan image for vulnerabilities 
-      - name: Scan image for Vulnerabilities
-        id: scan-image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'stable-scan'
-          exit-code: '1'
-          ignore-unfixed: false
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      # Upload scan results
-      - name: Upload scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
         
-      # Build image for scanning local
+      # Build image for push
       - name: Build Docker and push container
+        if: github.event_name != 'push'
         uses: docker/build-push-action@v3
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -109,5 +68,5 @@ jobs:
             ARC_DATA_EXT_VERSION=${{ env.ARC_DATA_EXT_VERSION }}
             ARC_DATA_CONTROLLER_VERSION=${{ env.ARC_DATA_CONTROLLER_VERSION }}
             ARC_DATA_WHL_URL=${{ env.ARC_DATA_WHL_URL }}
-          push: ${{ github.event_name != 'push' }}
+          push: true
           load: true
